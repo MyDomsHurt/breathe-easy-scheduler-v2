@@ -1,4 +1,4 @@
-import { SLOTS, TODAY, UNIT_TYPES } from './config.js';
+import { TODAY, UNIT_TYPES } from './config.js';
 
 export function pad(n) {
   return String(n).padStart(2, '0');
@@ -40,8 +40,12 @@ export function formatDay(iso, opts = {}) {
   });
 }
 
+export function workWeekDays(mondayIso) {
+  return Array.from({ length: 6 }, (_, i) => addDays(mondayIso, i));
+}
+
 export function formatWeekLabel(mondayIso) {
-  const end = addDays(mondayIso, 6);
+  const end = addDays(mondayIso, 5);
   const a = parseISO(mondayIso);
   const b = parseISO(end);
   const sameMonth = a.getMonth() === b.getMonth();
@@ -73,31 +77,6 @@ export function timeToMinutes(t) {
   if (ap === 'am' && h === 12) h = 0;
   if (!ap && h >= 1 && h <= 6) h += 12;
   return h * 60 + min;
-}
-
-export function slotForTime(time) {
-  const mins = timeToMinutes(time);
-  if (mins === 9999) return SLOTS[0].id;
-  const found = SLOTS.find((s) => mins >= s.startMin && mins < s.endMin);
-  return found ? found.id : mins < SLOTS[0].startMin ? SLOTS[0].id : SLOTS[SLOTS.length - 1].id;
-}
-
-export function slotById(id) {
-  return SLOTS.find((s) => s.id === id) || SLOTS[0];
-}
-
-export function formatSlotTime(slotId, explicit) {
-  if (explicit) return explicit;
-  const slot = slotById(slotId);
-  const fmt = (mins) => {
-    let h = Math.floor(mins / 60);
-    const m = mins % 60;
-    const ap = h >= 12 ? 'pm' : 'am';
-    if (h > 12) h -= 12;
-    if (h === 0) h = 12;
-    return `${pad(h)}.${pad(m)}${ap}`;
-  };
-  return `${fmt(slot.startMin)} => ${fmt(slot.startMin + 90)}`;
 }
 
 export function parseAcs(acs) {
