@@ -1,111 +1,82 @@
-import { SLOT_CAPACITY, SLOTS, TEAM_META, TEAMS } from './config.js';
-import { acsTotal, jobTypeOf, slotForTime } from './utils.js';
+import { TEAM_META, TEAMS } from './config.js';
+import { jobTypeOf, timeToMinutes } from './utils.js';
 
-export function jobSlot(job) {
-  return job.slot || slotForTime(job.time);
+export function sortByTime(jobs) {
+  return jobs.slice().sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 }
 
-export function jobLoad(job) {
-  const type = jobTypeOf(job);
-  if (type === 'return' || type === 'influencer') return 0;
-  return acsTotal(job.acs);
+export function jobsForTeamDay(jobs, date, team) {
+  return sortByTime(jobs.filter((j) => j.date === date && j.team_lead === team));
 }
 
-export function jobsInCell(jobs, date, slotId, teams = TEAMS) {
-  const teamSet = new Set(teams);
-  return jobs.filter((j) => j.date === date && jobSlot(j) === slotId && teamSet.has(j.team_lead));
-}
-
-export function teamLoadInCell(jobs, date, slotId, team) {
-  return jobsInCell(jobs, date, slotId, [team]).reduce((n, j) => n + jobLoad(j), 0);
-}
-
-export function remainingForTeam(jobs, date, slotId, team) {
-  return Math.max(0, SLOT_CAPACITY - teamLoadInCell(jobs, date, slotId, team));
-}
-
-export function cellSummary(jobs, date, slotId, teams = TEAMS) {
-  const cellJobs = jobsInCell(jobs, date, slotId, teams);
-  const byTeam = {};
-  for (const team of teams) {
-    const tJobs = cellJobs.filter((j) => j.team_lead === team);
-    const used = tJobs.reduce((n, j) => n + jobLoad(j), 0);
-    const remaining = Math.max(0, SLOT_CAPACITY - used);
-    byTeam[team] = {
-      team,
-      used,
-      remaining,
-      ratio: used / SLOT_CAPACITY,
-      jobs: tJobs,
-      cleans: tJobs.filter((j) => jobTypeOf(j) === 'cleaning'),
-      returns: tJobs.filter((j) => jobTypeOf(j) === 'return'),
-      influencers: tJobs.filter((j) => jobTypeOf(j) === 'influencer'),
-    };
-  }
-  const remainings = teams.map((t) => byTeam[t].remaining);
-  const bestRemaining = remainings.length ? Math.max(...remainings) : 0;
-  const openTeams = teams.filter((t) => byTeam[t].remaining >= 2);
-  const tightOnly = !openTeams.length && teams.some((t) => byTeam[t].remaining > 0);
-  let openness = 'full';
-  if (bestRemaining >= 3) openness = 'open';
-  else if (bestRemaining >= 1) openness = 'tight';
-  return {
-    date,
-    slotId,
-    jobs: cellJobs,
-    byTeam,
-    bestRemaining,
-    openTeams,
-    tightOnly,
-    openness,
-    cleanCount: cellJobs.filter((j) => jobTypeOf(j) === 'cleaning').length,
-    specialCount: cellJobs.filter((j) => jobTypeOf(j) !== 'cleaning').length,
-  };
+export function teamMembersOnDay(jobs, date, team) {
+  const hit = jobs.find((j) => j.date === date && j.team_lead === team && j.team_members);
+  return hit?.team_members || TEAM_META[team]?.members || team;
 }
 
 export function districtsForTeamOnDay(jobs, date, team) {
-  const set = new Set(
+  return [...new Set(
     jobs.filter((j) => j.date === date && j.team_lead === team && j.district).map((j) => j.district)
-  );
-  return [...set];
+  )];
 }
 
 /**
- * Suggest a team for a booking: remaining capacity first, then same-day
- * district clustering, then the team's home areas.
+ * Suggest a team for a date: lighter day first, then same-day district
+ * clustering, then home areas. Never a hard quota.
  */
-export function suggestTeams(jobs, { date, slotId, district, acsNeeded = 2, teams = TEAMS }) {
-  const need = Math.max(1, acsNeeded);
+export function suggestTeams(jobs, { date, district, teams = TEAMS } = {}) {
   return teams
     .map((team) => {
-      const remaining = remainingForTeam(jobs, date, slotId, team);
+      const dayJobs = jobsForTeamDay(jobs, date, team);
       const dayDistricts = districtsForTeamOnDay(jobs, date, team);
-      const home = TEAM_META[team].home || [];
-      let score = remaining * 4;
-      if (remaining >= need) score += 20;
-      else score -= 40;
+      const home = TEAM_META[team]?.home || [];
+      let score = 40 - dayJobs.length * 6;
       if (district && dayDistricts.includes(district)) score += 16;
       if (district && home.includes(district)) score += 8;
-      if (dayDistricts.length === 0) score += 3;
-      score -= teamLoadInCell(jobs, date, slotId, team);
+      if (dayJobs.length === 0) score += 8;
       return {
         team,
-        remaining,
-        fits: remaining >= need,
+        jobCount: dayJobs.length,
         dayDistricts,
+        members: teamMembersOnDay(jobs, date, team),
         score,
       };
     })
     .sort((a, b) => b.score - a.score);
 }
 
-export function opennessLabel(summary) {
-  if (summary.openness === 'open') {
-    const n = summary.openTeams.length;
-    return n ? `${n} team${n === 1 ? '' : 's'} open` : 'Open';
-  }
-  if (summary.openness === 'tight') return 'Tight';
-  return 'Full';
+export function overlapWarning(jobs, { date, team, time }) {
+  const mins = timeToMinutes(time);
+  if (!time || mins === 9999) return null;
+  const near = jobsForTeamDay(jobs, date, team).find((j) => {
+    const other = timeToMinutes(j.time);
+    if (other === 9999) return false;
+    return Math.abs(other - mins) < 45;
+  });
+  if (!near) return null;
+  return `${near.time || 'Another job'} already on ${team} that day`;
 }
 
-export { SLOT_CAPACITY, SLOTS };
+export function weekStats(jobs, days, teams) {
+  const set = new Set(days);
+  const teamSet = new Set(teams);
+  const weekJobs = jobs.filter((j) => set.has(j.date) && teamSet.has(j.team_lead));
+  const cleans = weekJobs.filter((j) => jobTypeOf(j) === 'cleaning');
+  const returns = weekJobs.filter((j) => jobTypeOf(j) === 'return');
+  const influencers = weekJobs.filter((j) => jobTypeOf(j) === 'influencer');
+  const revenue = cleans.reduce((n, j) => n + (j.amount || 0), 0);
+  let emptyCells = 0;
+  for (const date of days) {
+    for (const team of teams) {
+      if (jobsForTeamDay(weekJobs, date, team).length === 0) emptyCells += 1;
+    }
+  }
+  return {
+    total: weekJobs.length,
+    cleans: cleans.length,
+    returns: returns.length,
+    influencers: influencers.length,
+    revenue,
+    emptyCells,
+  };
+}

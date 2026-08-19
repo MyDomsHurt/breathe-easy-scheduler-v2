@@ -62,16 +62,6 @@ export const DISTRICTS = {
   'L-M': { label: 'Lai Chi Kok / Mei Foo', short: 'L-M', bg: '#A2C4C9', border: '#76A5AF', text: '#1a3338' },
 };
 
-export const SLOTS = [
-  { id: 'morning', label: 'Morning', short: 'AM', hint: '9:00 – 11:00', startMin: 9 * 60, endMin: 11 * 60 },
-  { id: 'late_morning', label: 'Late morning', short: 'Late AM', hint: '11:00 – 1:00', startMin: 11 * 60, endMin: 13 * 60 },
-  { id: 'afternoon', label: 'Afternoon', short: 'PM', hint: '1:00 – 3:30', startMin: 13 * 60, endMin: 15 * 60 + 30 },
-  { id: 'late_afternoon', label: 'Late afternoon', short: 'Late PM', hint: '3:30 – 6:00', startMin: 15 * 60 + 30, endMin: 18 * 60 },
-];
-
-/** Cleaning capacity per team per slot, in countable AC units. Returns / influencers do not fill this. */
-export const SLOT_CAPACITY = 6;
-
 export const UNIT_TYPES = [
   { id: 'S', label: 'Split', price: 580 },
   { id: 'W', label: 'Window', price: 480 },

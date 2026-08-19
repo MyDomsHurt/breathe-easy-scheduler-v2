@@ -24,7 +24,10 @@ export async function loadSeedJobs() {
   const parts = await Promise.all(
     DAY_URLS.map(async (url) => {
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+      if (!res.ok) {
+        console.warn(`Missing ${url} (${res.status})`);
+        return [];
+      }
       return res.json();
     })
   );
