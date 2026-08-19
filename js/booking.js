@@ -1,26 +1,25 @@
-import { DISTRICTS, JOB_TYPES, PAYMENTS, SLOTS, TEAM_META, TEAMS, UNIT_TYPES } from './config.js';
-import { remainingForTeam, suggestTeams } from './capacity.js';
-import { addJob, allJobs } from './store.js';
+import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAM_META, UNIT_TYPES } from './config.js';
+import { overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
+import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, estimateAmount, formatDay, formatSlotTime } from './utils.js';
+import { acsLabel, acsTotal, estimateAmount, formatDay, parseAcs } from './utils.js';
 
 let form = {
+  job_id: '',
   client_name: '',
   mobile: '',
   address: '',
   district: '',
   units: { S: 0, W: 0, B: 0, C: 0 },
   date: '',
-  slot: 'morning',
+  time: '',
   team_lead: 'Josh',
   job_type: 'cleaning',
   amount: '',
   payment: 'Unpaid',
   notes: '',
-  clientLocked: false,
+  lockAmount: false,
 };
-
-let lastSuggested = [];
 
 function $(sel) {
   return document.querySelector(sel);
@@ -28,32 +27,32 @@ function $(sel) {
 
 export function openBooking(prefill = {}) {
   const jobs = allJobs();
+  const editing = Boolean(prefill.job_id);
+  const units = prefill.units
+    || (prefill.acs != null || editing ? parseAcs(prefill.acs) : { S: 2, W: 0, B: 0, C: 0 });
   form = {
+    job_id: prefill.job_id || '',
     client_name: prefill.client_name || '',
     mobile: prefill.mobile || '',
     address: prefill.address || '',
     district: prefill.district || '',
-    units: prefill.units || { S: 2, W: 0, B: 0, C: 0 },
+    units,
     date: prefill.date || '',
-    slot: prefill.slot || 'morning',
+    time: prefill.time || '',
     team_lead: prefill.team_lead || '',
-    job_type: prefill.job_type || 'cleaning',
-    amount: prefill.amount || '',
+    job_type: prefill.job_type || (prefill.is_return ? 'return' : 'cleaning'),
+    amount: prefill.amount != null && prefill.amount !== '' ? prefill.amount : '',
     payment: prefill.payment || 'Unpaid',
     notes: prefill.notes || '',
-    clientLocked: false,
+    lockAmount: editing && prefill.amount != null,
+    invoice: prefill.invoice,
+    receipt: prefill.receipt,
+    source: prefill.source,
   };
-  if (!form.date) {
-    form.date = new Date().toISOString().slice(0, 10);
-  }
+  if (!form.date) form.date = new Date().toISOString().slice(0, 10);
   if (form.job_type !== 'cleaning') form.units = { S: 0, W: 0, B: 0, C: 0 };
   if (!form.team_lead) {
-    const ranked = suggestTeams(jobs, {
-      date: form.date,
-      slotId: form.slot,
-      district: form.district,
-      acsNeeded: neededAcs(),
-    });
+    const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
     form.team_lead = ranked[0]?.team || 'Josh';
   }
   renderForm();
@@ -69,45 +68,39 @@ export function closeBooking() {
   root.setAttribute('aria-hidden', 'true');
 }
 
-function neededAcs() {
-  if (form.job_type !== 'cleaning') return 1;
-  return Math.max(1, acsTotal(form.units));
-}
-
 function syncAmount() {
   if (form.job_type !== 'cleaning') {
     form.amount = 0;
     return;
   }
+  if (form.lockAmount) return;
   form.amount = estimateAmount(form.units, form.job_type);
 }
 
+function others() {
+  return allJobs().filter((j) => j.job_id !== form.job_id);
+}
+
 function renderForm() {
-  const jobs = allJobs();
+  const jobs = others();
   syncAmount();
-  const ranked = suggestTeams(jobs, {
-    date: form.date,
-    slotId: form.slot,
-    district: form.district,
-    acsNeeded: neededAcs(),
-  });
-  lastSuggested = ranked;
+  const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
   if (form.team_lead && !ranked.find((r) => r.team === form.team_lead)) {
     form.team_lead = ranked[0]?.team || form.team_lead;
   }
   const best = ranked[0];
-  const remaining = remainingForTeam(jobs, form.date, form.slot, form.team_lead);
-  const fits = remaining >= neededAcs() || form.job_type !== 'cleaning';
-  const slot = SLOTS.find((s) => s.id === form.slot);
+  const warn = overlapWarning(jobs, { date: form.date, team: form.team_lead, time: form.time });
+  const members = teamMembersOnDay(allJobs(), form.date, form.team_lead);
+  const editing = Boolean(form.job_id);
 
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
-    <aside class="drawer" role="dialog" aria-label="New booking">
+    <aside class="drawer" role="dialog" aria-label="${editing ? 'Edit booking' : 'New booking'}">
       <div class="drawer-head">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
           <div>
-            <h2>New booking</h2>
-            <p>${form.date ? formatDay(form.date, { weekday: 'long' }) : 'Pick a date'} · ${slot?.label || ''} · ${form.team_lead || 'choose team'}</p>
+            <h2>${editing ? 'Edit booking' : 'New booking'}</h2>
+            <p>${form.date ? formatDay(form.date, { weekday: 'long' }) : 'Pick a date'} · ${form.team_lead || 'choose team'}${form.time ? ' · ' + form.time : ''}</p>
           </div>
           <button class="icon-btn" data-close="1" aria-label="Close">✕</button>
         </div>
@@ -145,9 +138,9 @@ function renderForm() {
               <div class="stepper">
                 <span>${u.label} <small style="color:#64748b">${u.id}</small></span>
                 <div style="display:flex;gap:6px;align-items:center">
-                  <button data-unit="${u.id}" data-delta="-1">−</button>
+                  <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
                   <strong>${form.units[u.id] || 0}</strong>
-                  <button data-unit="${u.id}" data-delta="1">+</button>
+                  <button type="button" data-unit="${u.id}" data-delta="1">+</button>
                 </div>
               </div>`).join('')}
           </div>
@@ -162,47 +155,35 @@ function renderForm() {
             <input id="dateInput" type="date" value="${form.date}" />
           </div>
           <div class="field">
-            <label>Time block</label>
-            <div class="slot-picks" id="slotPicks">
-              ${SLOTS.map((s) => {
-                const open = TEAMS.filter((t) => remainingForTeam(jobs, form.date, s.id, t) >= neededAcs()).length;
-                return `<button class="pick ${form.slot === s.id ? 'on' : ''}" data-slot="${s.id}">
-                  <strong>${s.short}</strong>
-                  <div class="meta" style="font-size:11px;color:#64748b">${s.hint}</div>
-                  <div style="font-size:11px;font-weight:700;color:${open ? '#047857' : '#b45309'}">${open} teams fit</div>
-                </button>`;
-              }).join('')}
-            </div>
+            <label>5. Time</label>
+            <input id="timeInput" value="${escapeAttr(form.time)}" placeholder="09.00am or 02.15pm" />
+            <div style="font-size:11px;color:#64748b;margin-top:4px">Free text — same style as the spreadsheet</div>
           </div>
         </div>
 
         <div class="field">
-          <label>5. Team · live capacity</label>
-          <div class="capacity-live" style="margin-bottom:8px">
-            ${fits
-              ? `<strong style="color:#047857">${form.team_lead} can take this</strong> · ${remaining} AC units still free in ${slot?.label || 'this slot'}`
-              : `<strong style="color:#c2410c">${form.team_lead} is tight</strong> · only ${remaining} free, this job needs ${neededAcs()}. Pick another team or slot.`}
-            ${best && best.team !== form.team_lead ? ` · Suggested: <b>${best.team}</b>` : ''}
-          </div>
+          <label>6. Team</label>
+          ${warn ? `<div class="capacity-live" style="margin-bottom:8px"><strong style="color:#c2410c">Heads up</strong> · ${warn}. You can still book.</div>` : ''}
           <div class="team-picks">
             ${ranked.map((r, i) => `
-              <button class="team-card ${form.team_lead === r.team ? 'on' : ''}" data-team="${r.team}" style="--team:${TEAM_META[r.team].color}">
+              <button type="button" class="team-card ${form.team_lead === r.team ? 'on' : ''}" data-team="${r.team}" style="--team:${TEAM_META[r.team].color}">
                 <span class="bar"></span>
                 <span>
                   <strong>${r.team}</strong>
-                  <div class="meta">${TEAM_META[r.team].members}${r.dayDistricts.length ? ' · already in ' + r.dayDistricts.join(', ') : ''}</div>
+                  <div class="meta">${r.members}${r.dayDistricts.length ? ' · already in ' + r.dayDistricts.join(', ') : ''}</div>
                 </span>
                 <span>
                   ${i === 0 ? '<span class="badge">Best</span>' : ''}
-                  <span class="badge ${r.fits ? '' : r.remaining > 0 ? 'warn' : 'bad'}">${r.remaining} left</span>
+                  <span class="badge">${r.jobCount} job${r.jobCount === 1 ? '' : 's'}</span>
                 </span>
               </button>`).join('')}
           </div>
+          <div class="capacity-live" style="margin-top:8px">${form.team_lead} · ${members} · ${ranked.find((r) => r.team === form.team_lead)?.jobCount || 0} jobs this day${best && best.team !== form.team_lead ? ' · Suggested: <b>' + best.team + '</b>' : ''}</div>
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <label>6. Job type</label>
+            <label>7. Job type</label>
             <select id="typeInput">
               ${JOB_TYPES.map((t) => `<option value="${t.id}" ${form.job_type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
             </select>
@@ -226,8 +207,9 @@ function renderForm() {
         </div>
       </div>
       <div class="drawer-foot">
-        <button class="ghost-btn" data-close="1">Cancel</button>
-        <button class="primary-btn" id="saveBooking">Save booking</button>
+        ${editing ? '<button class="ghost-btn" id="deleteBooking" style="margin-right:auto;color:#b91c1c;border-color:#fecaca">Cancel job</button>' : ''}
+        <button class="ghost-btn" data-close="1">Close</button>
+        <button class="primary-btn" id="saveBooking">${editing ? 'Save changes' : 'Save booking'}</button>
       </div>
     </aside>
   `;
@@ -248,25 +230,30 @@ function bindForm() {
   $('#addressInput').addEventListener('input', (e) => { form.address = e.target.value; });
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
+  $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
+  $('#timeInput').addEventListener('change', (e) => { form.time = e.target.value; renderForm(); });
   $('#typeInput').addEventListener('change', (e) => { form.job_type = e.target.value; renderForm(); });
   $('#payInput').addEventListener('change', (e) => { form.payment = e.target.value; });
-  $('#amountInput').addEventListener('input', (e) => { form.amount = Number(e.target.value || 0); });
+  $('#amountInput').addEventListener('input', (e) => {
+    form.amount = Number(e.target.value || 0);
+    form.lockAmount = true;
+  });
   $('#notesInput').addEventListener('input', (e) => { form.notes = e.target.value; });
   root.querySelectorAll('[data-unit]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.unit;
       const delta = Number(btn.dataset.delta);
       form.units[id] = Math.max(0, (form.units[id] || 0) + delta);
+      form.lockAmount = false;
       renderForm();
     });
-  });
-  root.querySelectorAll('[data-slot]').forEach((btn) => {
-    btn.addEventListener('click', () => { form.slot = btn.dataset.slot; renderForm(); });
   });
   root.querySelectorAll('[data-team]').forEach((btn) => {
     btn.addEventListener('click', () => { form.team_lead = btn.dataset.team; renderForm(); });
   });
   $('#saveBooking').addEventListener('click', save);
+  const del = $('#deleteBooking');
+  if (del) del.addEventListener('click', cancelJob);
 }
 
 function renderHits(q) {
@@ -308,8 +295,8 @@ function save() {
     $('#clientSearch')?.focus();
     return;
   }
-  if (!form.date || !form.slot || !form.team_lead) {
-    toast('Date, time and team are required');
+  if (!form.date || !form.team_lead) {
+    toast('Date and team are required');
     return;
   }
   if (form.job_type === 'cleaning' && acsTotal(form.units) === 0) {
@@ -319,16 +306,28 @@ function save() {
   const notes = form.job_type === 'influencer' && !/influencer/i.test(form.notes || '')
     ? `Influencer (Free)${form.notes ? ' — ' + form.notes : ''}`
     : form.notes;
-  const job = addJob({
+  const payload = {
     ...form,
     acs: form.job_type === 'cleaning' ? acsLabel(form.units) : '',
     units: form.units,
     notes,
-    time: formatSlotTime(form.slot),
+    time: String(form.time || '').trim(),
+    team_members: teamMembersOnDay(allJobs(), form.date, form.team_lead),
     amount: form.job_type === 'cleaning' ? Number(form.amount || 0) : null,
-  });
+  };
+  const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);
   closeBooking();
   window.dispatchEvent(new CustomEvent('be:booked', { detail: job }));
+}
+
+function cancelJob() {
+  if (!form.job_id) return;
+  if (!confirm('Remove this job from the roster?')) return;
+  const name = form.client_name;
+  removeJob(form.job_id);
+  closeBooking();
+  window.dispatchEvent(new CustomEvent('be:toast', { detail: `Cancelled ${name || 'job'}` }));
+  window.dispatchEvent(new CustomEvent('be:changed'));
 }
 
 function toast(msg) {
@@ -337,13 +336,11 @@ function toast(msg) {
 
 function escapeAttr(s) {
   return String(s || '')
-    .replace(/&/g, '&')
-    .replace(/"/g, '"')
-    .replace(/</g, '<');
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
 }
 
 function money(n) {
   return '$' + Math.round(Number(n || 0)).toLocaleString('en-HK');
 }
-
-export { lastSuggested };
