@@ -1,6 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
 import { addDays, formatMoney, formatWeekLabel, jobTypeOf, mondayOf, weekDays } from './utils.js';
-import { allJobs, getJob, resetDemo, subscribe } from './store.js';
+import { allJobs, getJob, resetDemo, subscribe, initStore } from './store.js';
 import { cellSummary, suggestTeams } from './capacity.js';
 import { renderDayBoard, renderWeekBoard, weekStats } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
@@ -222,4 +222,13 @@ bindFilters();
 bindChrome();
 bindBoardClicks();
 subscribe(paint);
-paint();
+
+initStore()
+  .then(() => paint())
+  .catch((err) => {
+    console.error(err);
+    const el = document.getElementById('boardMount');
+    if (el) {
+      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Failed to load schedule data. Serve over HTTP and check data/week-2026-08-17-real.json.</p>';
+    }
+  });
