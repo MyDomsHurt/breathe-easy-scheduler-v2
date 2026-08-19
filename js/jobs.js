@@ -91,6 +91,10 @@ export function renderJobModal(el, job) {
         ${kv('Invoice', job.invoice || '—')}
         ${kv('Notes', job.notes || '—')}
         ${kv('Job ID', job.job_id)}
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="primary-btn" data-edit-job="${job.job_id}" type="button">Edit / move</button>
+          <button class="ghost-btn" data-cancel-job="${job.job_id}" type="button" style="color:#b91c1c;border-color:#fecaca">Cancel job</button>
+        </div>
       </div>
     </div>
   `;
