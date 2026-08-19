@@ -1,5 +1,5 @@
 import { STORAGE_KEY, TEAM_META } from './config.js';
-import { buildSeedJobs } from './seed.js';
+import { loadSeedJobs, buildSeedJobs } from './seed.js';
 import { acsLabel, estimateAmount, formatSlotTime, jobTypeOf, uid, weekNumber } from './utils.js';
 
 const listeners = new Set();
@@ -25,17 +25,34 @@ function savePersisted(state) {
   );
 }
 
-function createState() {
+function createState(seed) {
   const persisted = loadPersisted();
-  const seed = buildSeedJobs();
   return {
-    seed,
+    seed: seed || [],
     extras: persisted.extras,
     removed: new Set(persisted.removed),
   };
 }
 
-let state = createState();
+let state = createState([]);
+let ready = false;
+let readyPromise = null;
+
+export function whenReady() {
+  return readyPromise || Promise.resolve();
+}
+
+export async function initStore() {
+  if (ready) return allJobs();
+  readyPromise = (async () => {
+    const seed = await loadSeedJobs();
+    state = createState(seed);
+    ready = true;
+    emit();
+    return allJobs();
+  })();
+  return readyPromise;
+}
 
 export function allJobs() {
   const extras = state.extras.filter((j) => !state.removed.has(j.job_id));
@@ -93,7 +110,8 @@ export function addJob(input) {
 
 export function resetDemo() {
   localStorage.removeItem(STORAGE_KEY);
-  state = createState();
+  const seed = buildSeedJobs();
+  state = createState(seed);
   emit();
 }
 
