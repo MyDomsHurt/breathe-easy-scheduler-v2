@@ -1,6 +1,6 @@
 import { STORAGE_KEY, TEAM_META } from './config.js';
 import { loadSeedJobs, buildSeedJobs } from './seed.js';
-import { acsLabel, estimateAmount, formatSlotTime, jobTypeOf, uid, weekNumber } from './utils.js';
+import { acsLabel, estimateAmount, jobTypeOf, uid, weekNumber } from './utils.js';
 
 const listeners = new Set();
 
@@ -84,11 +84,10 @@ export function addJob(input) {
     job_id: input.job_id || uid(`${input.date}-${(input.team_lead || 'team').toLowerCase()}`),
     date: input.date,
     week: weekNumber(input.date),
-    slot: input.slot,
     team_lead: input.team_lead,
-    team_members: TEAM_META[input.team_lead]?.members || input.team_lead,
+    team_members: input.team_members || TEAM_META[input.team_lead]?.members || input.team_lead,
     client_name: input.client_name,
-    time: input.time || formatSlotTime(input.slot),
+    time: input.time || '',
     mobile: input.mobile || '',
     address: input.address || '',
     acs: type === 'return' ? '' : acs,
@@ -110,7 +109,7 @@ export function addJob(input) {
 
 export function resetDemo() {
   localStorage.removeItem(STORAGE_KEY);
-  const seed = buildSeedJobs();
+  const seed = state.seed.length ? state.seed : buildSeedJobs();
   state = createState(seed);
   emit();
 }
