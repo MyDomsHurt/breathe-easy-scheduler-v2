@@ -18,9 +18,22 @@ The home view is a **week availability board**, not a job list.
 - Click a cell or **Book here** to open a booking form pre-filled with that date, slot, and a suggested team.
 - **+ New booking** opens the same form from anywhere.
 
+## Seed data (real week)
+
+The board is seeded from a real operational week taken from the Schedule Master:
+
+- **17–22 August 2026** (105 jobs)
+- Dates, team leads, time slots, AC counts, job types, amounts and payment status are **real**
+- Client names, mobiles and street addresses are **anonymised**
+- Source files: `data/day-2026-08-17.json` … `data/day-2026-08-22.json`
+
+This makes capacity behaviour realistic (some slots genuinely full / over the 6-unit model).
+
+> If the day JSON files are missing or incomplete after a pull, copy them from the project artifacts folder into `data/` and commit.
+
 ## Run locally
 
-Serve the folder over HTTP (ES modules will not load from `file://`):
+Serve the folder over HTTP (ES modules and `fetch` will not work from `file://`):
 
 ```bash
 cd breathe-easy-scheduler-v2
@@ -32,8 +45,7 @@ Open http://localhost:8080
 ## Prototype notes
 
 - Job shape matches the live viewer (`date`, `time`, `team_lead`, `client_name`, `mobile`, `address`, `district`, `acs`, `amount`, `payment`, `is_return`, plus `job_type`).
-- Seed schedule is a **fictional** 3-week board around 17–28 Aug 2026, curated so this week has busy Monday, open Wednesday afternoon, and a mostly empty Friday.
-- New bookings persist in `localStorage`. Use **Reset demo data** to go back to the seed.
+- New bookings persist in `localStorage`. Use **Reset demo data** to go back to the real-week seed.
 - No Google auth in this pass — the goal is the board + booking UX.
 - Stack is vanilla HTML / CSS / JS. No build step.
 
@@ -43,10 +55,11 @@ Open http://localhost:8080
 - Cleaning jobs consume units (`2S` = 2, `5B` = 5).
 - Returns and influencer jobs are visible but do not consume cleaning capacity.
 - Team suggestion prefers remaining space, then same-day district clustering, then each team’s home area.
+- Real week data often exceeds 6 units in busy cells — those cells correctly show as full.
 
 ## Next
 
-- Persist to a shared backend instead of localStorage
-- Import the live Schedule Master feed
-- Technician day view
-- Auth, once the board is the default home
+- Shared backend instead of localStorage
+- Import additional weeks / rolling live feed
+- Edit / move jobs with live capacity feedback
+- Auth and technician day view
