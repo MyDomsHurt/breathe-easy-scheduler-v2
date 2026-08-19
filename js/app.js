@@ -1,8 +1,8 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
-import { addDays, formatMoney, formatWeekLabel, jobTypeOf, mondayOf, weekDays } from './utils.js';
+import { addDays, formatMoney, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
 import { allJobs, getJob, resetDemo, subscribe, initStore } from './store.js';
-import { cellSummary, suggestTeams } from './capacity.js';
-import { renderDayBoard, renderWeekBoard, weekStats } from './board.js';
+import { weekStats } from './capacity.js';
+import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList } from './jobs.js';
 
@@ -35,7 +35,7 @@ function filteredJobs() {
 
 function paint() {
   const jobs = filteredJobs();
-  const days = weekDays(state.monday);
+  const days = workWeekDays(state.monday);
   $('weekLabel').textContent = formatWeekLabel(state.monday);
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
@@ -47,19 +47,20 @@ function paint() {
   });
 
   if (state.view === 'board') {
-    const capacityJobs = teamJobs();
-    const stats = weekStats(capacityJobs, state.mode === 'week' ? days : [state.day], state.teams);
+    const rosterJobs = teamJobs();
+    const stats = weekStats(rosterJobs, state.mode === 'week' ? days : [state.day], state.teams);
     $('statsStrip').innerHTML = `
-      <div class="stat"><b>${stats.openCells}</b><span>open slots</span></div>
+      <div class="stat"><b>${stats.total}</b><span>jobs</span></div>
+      <div class="stat"><b>${stats.emptyCells}</b><span>empty team-days</span></div>
       <div class="stat"><b>${stats.cleans}</b><span>cleans</span></div>
       <div class="stat"><b>${stats.returns}</b><span>returns</span></div>
       <div class="stat"><b>${stats.influencers}</b><span>influencer</span></div>
       <div class="stat"><b>${formatMoney(stats.revenue)}</b><span>booked revenue</span></div>
     `;
     if (state.mode === 'week') {
-      renderWeekBoard($('boardMount'), { jobs: capacityJobs, chipJobs: jobs, monday: state.monday, days, teams: state.teams });
+      renderWeekBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, days, teams: state.teams });
     } else {
-      renderDayBoard($('boardMount'), { jobs: capacityJobs, chipJobs: jobs, date: state.day, teams: state.teams });
+      renderDayBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams });
     }
   } else {
     renderJobsList($('jobsMount'), jobs, state.query);
@@ -80,30 +81,18 @@ function bindBoardClicks() {
       paint();
       return;
     }
-    const cell = e.target.closest('[data-date][data-slot]');
-    if (!cell) return;
-    const date = cell.dataset.date;
-    const slot = cell.dataset.slot;
-    const jobs = teamJobs();
-    const summary = cellSummary(jobs, date, slot, state.teams);
-    const ranked = suggestTeams(jobs, {
-      date,
-      slotId: slot,
-      district: state.districts[0] || '',
-      acsNeeded: 2,
-      teams: state.teams,
-    });
-    openBooking({
-      date,
-      slot,
-      team_lead: ranked[0]?.team || summary.openTeams[0] || state.teams[0],
-    });
+    const add = e.target.closest('[data-book-date][data-book-team]');
+    const cell = e.target.closest('[data-date][data-team]');
+    const date = add?.dataset.bookDate || cell?.dataset.date;
+    const team = add?.dataset.bookTeam || cell?.dataset.team;
+    if (!date || !team) return;
+    openBooking({ date, team_lead: team });
   });
 }
 
 function bindFilters() {
   const teamBox = $('teamFilters');
-  teamBox.innerHTML = TEAMS.map((t) => `<button class="chip on" data-team="${t}" style="--team:var(--team-${t.toLowerCase()})">${t}</button>`).join('');
+  teamBox.innerHTML = TEAMS.map((t) => `<button class="chip team on" data-team="${t}" style="--team:var(--team-${t.toLowerCase()})">${t}</button>`).join('');
   teamBox.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-team]');
     if (!btn) return;
@@ -153,7 +142,10 @@ function bindChrome() {
   document.querySelectorAll('[data-mode]').forEach((el) => {
     el.addEventListener('click', () => {
       state.mode = el.dataset.mode;
-      if (state.mode === 'day') state.day = TODAY >= state.monday && TODAY <= addDays(state.monday, 6) ? TODAY : state.monday;
+      if (state.mode === 'day') {
+        const days = workWeekDays(state.monday);
+        state.day = days.includes(TODAY) ? TODAY : state.monday;
+      }
       paint();
     });
   });
@@ -229,6 +221,6 @@ initStore()
     console.error(err);
     const el = document.getElementById('boardMount');
     if (el) {
-      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Failed to load schedule data. Serve over HTTP and check data/week-2026-08-17-real.json.</p>';
+      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Failed to load schedule data. Serve over HTTP and check data/day-2026-08-*.json.</p>';
     }
   });
