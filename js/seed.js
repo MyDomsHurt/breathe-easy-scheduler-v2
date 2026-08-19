@@ -1,20 +1,12 @@
 /**
  * Seed data: Schedule Master week 17–22 Aug 2026.
- * Prefer one combined file so a missing day JSON cannot empty the board.
+ * Embedded WEEK_JOBS is the source of truth so the board cannot fail
+ * just because a JSON fetch is blocked.
  */
 
 import { TEAM_META } from './config.js';
 import { weekNumber } from './utils.js';
-
-const WEEK_URL = './data/week-2026-08-17.json';
-const DAY_URLS = [
-  './data/day-2026-08-17.json',
-  './data/day-2026-08-18.json',
-  './data/day-2026-08-19.json',
-  './data/day-2026-08-20.json',
-  './data/day-2026-08-21.json',
-  './data/day-2026-08-22.json',
-];
+import { WEEK_JOBS } from './week-data.js';
 
 let cached = null;
 
@@ -30,37 +22,12 @@ function normalize(rows) {
 
 export async function loadSeedJobs() {
   if (cached && cached.length) return cached;
-
-  try {
-    const res = await fetch(WEEK_URL);
-    if (res.ok) {
-      const rows = normalize(await res.json());
-      if (rows.length) {
-        cached = rows;
-        return cached;
-      }
-    }
-  } catch (err) {
-    console.warn('week file failed', err);
-  }
-
-  const parts = await Promise.all(
-    DAY_URLS.map(async (url) => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return [];
-        return res.json();
-      } catch {
-        return [];
-      }
-    })
-  );
-  cached = normalize(parts.flat());
+  cached = normalize(WEEK_JOBS);
   return cached;
 }
 
 export function buildSeedJobs() {
-  return cached || [];
+  return cached || normalize(WEEK_JOBS);
 }
 
 export function uniqueClientsFrom(jobs) {
