@@ -77,4 +77,4 @@ export const JOB_TYPES = [
 
 export const PAYMENTS = ['Unpaid', 'Payme', 'FPS', 'Cash', 'Visa', 'Payme / FPS'];
 
-export const STORAGE_KEY = 'be-scheduler-v2';
+export const STORAGE_KEY = 'be-scheduler-v2-roster';
