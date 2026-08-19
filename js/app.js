@@ -1,6 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
 import { addDays, formatMoney, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
-import { allJobs, getJob, resetDemo, subscribe, initStore } from './store.js';
+import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore } from './store.js';
 import { weekStats } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
@@ -34,9 +34,12 @@ function filteredJobs() {
 }
 
 function paint() {
+  const label = $('weekLabel');
+  const mount = $('boardMount');
+  if (!label || !mount) return;
   const jobs = filteredJobs();
   const days = workWeekDays(state.monday);
-  $('weekLabel').textContent = formatWeekLabel(state.monday);
+  label.textContent = formatWeekLabel(state.monday);
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   document.querySelectorAll('[data-nav]').forEach((el) => {
@@ -179,6 +182,24 @@ function bindChrome() {
     }
   });
   $('modalRoot').addEventListener('click', (e) => {
+    const edit = e.target.closest('[data-edit-job]');
+    if (edit) {
+      const job = getJob(edit.dataset.editJob);
+      renderJobModal($('modalRoot'), null);
+      if (job) openBooking(job);
+      return;
+    }
+    const cancel = e.target.closest('[data-cancel-job]');
+    if (cancel) {
+      const job = getJob(cancel.dataset.cancelJob);
+      if (job && confirm('Remove this job from the roster?')) {
+        removeJob(job.job_id);
+        renderJobModal($('modalRoot'), null);
+        paint();
+        toast(`Cancelled ${job.client_name}`);
+      }
+      return;
+    }
     if (e.target.closest('[data-close-modal]')) renderJobModal($('modalRoot'), null);
   });
   $('jobsMount').addEventListener('click', (e) => {
@@ -197,8 +218,9 @@ function bindChrome() {
     state.day = job.date;
     state.view = 'board';
     paint();
-    toast(`Booked ${job.client_name} · ${job.team_lead} · ${job.date}`);
+    toast(`Saved ${job.client_name} · ${job.team_lead} · ${job.date}`);
   });
+  window.addEventListener('be:changed', () => paint());
   window.addEventListener('be:toast', (e) => toast(e.detail));
 }
 
@@ -221,6 +243,6 @@ initStore()
     console.error(err);
     const el = document.getElementById('boardMount');
     if (el) {
-      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Failed to load schedule data. Serve over HTTP and check data/day-2026-08-*.json.</p>';
+      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Could not start the scheduler. Hard-refresh (Cmd+Shift+R). If you opened the file directly, use http://127.0.0.1:8765 instead.</p>';
     }
   });
