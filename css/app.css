@@ -219,13 +219,13 @@ button, input, select, textarea { font-family: inherit; }
   box-shadow: var(--shadow);
 }
 
-.board {
-  min-width: 980px;
+.roster {
+  min-width: 1080px;
   display: grid;
-  grid-template-columns: 118px repeat(7, minmax(120px, 1fr));
+  grid-template-columns: 132px repeat(var(--days, 6), minmax(150px, 1fr));
 }
 
-.board-head, .slot-label, .day-col-head, .slot-cell {
+.board-head, .team-row-label, .day-col-head, .roster-cell {
   border-bottom: 1px solid var(--line);
   border-right: 1px solid #eef2f6;
 }
@@ -260,31 +260,30 @@ button.day-col-head:hover { background: #e0f2fe; }
 .day-col-head.today .dom { color: var(--brand); }
 .day-col-head.weekend { background: #f8fafc; }
 
-.slot-label {
+.team-row-label {
   position: sticky;
   left: 0;
   z-index: 2;
   background: #fcfdfe;
-  padding: 10px 10px;
+  padding: 10px;
+  border-left: 3px solid var(--team, #cbd5e1);
 }
 
-.slot-label strong { display: block; font-size: 12px; }
-.slot-label span { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.team-row-label strong { display: block; font-size: 13px; }
+.team-home { font-size: 10px; color: var(--muted); margin-top: 4px; font-weight: 600; }
 
-.slot-cell {
-  min-height: 148px;
+.roster-cell {
+  min-height: 168px;
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   cursor: pointer;
-  transition: background .12s ease;
+  background: white;
 }
 
-.slot-cell.open { background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 62%); }
-.slot-cell.tight { background: linear-gradient(180deg, #fffbeb 0%, #ffffff 70%); }
-.slot-cell.full { background: #f8fafc; }
-.slot-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
+.roster-cell.empty { background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 70%); }
+.roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
 
 .cell-top {
   display: flex;
@@ -300,32 +299,18 @@ button.day-col-head:hover { background: #e0f2fe; }
   text-transform: uppercase;
 }
 
-.slot-cell.open .cell-status { color: #047857; }
-.slot-cell.tight .cell-status { color: #b45309; }
-.slot-cell.full .cell-status { color: #64748b; }
+.roster-cell.empty .cell-status { color: #047857; }
+.roster-cell.has-jobs .cell-status { color: var(--ink); }
 
-.meters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14px, 1fr));
-  gap: 3px;
-}
-
-.meter {
-  height: 8px;
-  border-radius: 99px;
-  background: color-mix(in srgb, var(--team) 16%, white);
+.cell-members {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--team) 28%, white);
+  text-overflow: ellipsis;
+  max-width: 70%;
 }
-
-.meter > i {
-  display: block;
-  height: 100%;
-  background: var(--team);
-  border-radius: inherit;
-}
-
-.meter.empty { opacity: .55; }
 
 .job-chips { display: flex; flex-direction: column; gap: 4px; }
 
@@ -350,6 +335,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   cursor: pointer;
 }
 
+.job-chip .when { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .job-chip .who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .job-chip .acs { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
 
@@ -387,36 +373,69 @@ button.day-col-head:hover { background: #e0f2fe; }
   font-weight: 700;
   padding: 4px 6px;
   text-align: center;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
 }
 
-.slot-cell.full .book-here {
+.roster-cell.has-jobs .book-here {
   border-color: #cbd5e1;
-  background: #f1f5f9;
-  color: #64748b;
+  background: #f8fafc;
+  color: #475569;
 }
 
-.slot-cell.tight .book-here {
-  border-color: #fcd34d;
-  background: #fffbeb;
-  color: #b45309;
-}
-
-.day-grid {
-  display: grid;
-  grid-template-columns: 132px repeat(4, 1fr);
-  min-width: 860px;
-}
-
-.day-cell { min-height: 168px; }
-
-.team-row-label {
-  position: sticky;
-  left: 0;
-  background: #fcfdfe;
-  padding: 10px;
-  border-right: 1px solid var(--line);
+.day-roster-head {
+  padding: 10px 14px;
+  font-weight: 800;
   border-bottom: 1px solid var(--line);
+  background: #f8fafc;
 }
+
+.day-roster {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 6), minmax(200px, 1fr));
+  min-width: 1220px;
+}
+
+.day-col { border-right: 1px solid var(--line); min-height: 70vh; }
+.day-col-team {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--team);
+  background: #fcfdfe;
+}
+
+.day-cell { min-height: 240px; border: 0; }
+
+.job-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 1px solid #e5eaf0;
+  border-left: 3px solid var(--team);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+.job-card.return {
+  background: repeating-linear-gradient(-45deg, #fff7ed, #fff7ed 3px, #ffedd5 3px, #ffedd5 6px);
+  border-color: #fdba74;
+  border-left-color: #d97706;
+}
+.job-card.influencer {
+  background: #f5f3ff;
+  border: 1px dashed #8b5cf6;
+  border-left: 3px solid #7c3aed;
+}
+.card-top { display: flex; gap: 6px; align-items: center; }
+.card-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.card-notes { font-size: 11px; color: #475569; margin: 4px 0 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 .team-dot {
   width: 10px;
@@ -426,6 +445,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   margin-right: 6px;
 }
 
+/* Jobs list */
 .jobs-toolbar {
   display: flex;
   gap: 10px;
@@ -472,6 +492,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 .jobs-table tr { cursor: pointer; }
 .jobs-table tr:hover td { background: #f8fafc; }
 
+/* Drawer */
 .drawer-root, .modal-root {
   position: fixed;
   inset: 0;

@@ -45,7 +45,7 @@ Open http://localhost:8080
 - Job shape matches the live viewer (`date`, `time`, `team_lead`, `client_name`, `mobile`, `address`, `district`, `acs`, `amount`, `payment`, `is_return`, plus `job_type`).
 - Click a job to open details, then **Edit / move** or **Cancel job**.
 - New and edited bookings persist in `localStorage`. Use **Reset demo data** to go back to the seed week.
-- Week jobs are embedded in `js/week-data.js` so the board loads even if JSON fetch fails.
+- The board loads `data/week-2026-08-17.json` first (108 jobs) so a missing day file cannot empty the view.
 - Booking time is free-form. Team suggestion uses how busy that day already is and district clustering — never a hard block.
 - A soft warning appears if the typed time is close to another job on the same team-day.
 - No Google auth in this pass.
@@ -55,4 +55,5 @@ Open http://localhost:8080
 
 - Shared backend instead of localStorage
 - Import additional weeks / rolling live feed
+- Edit / move jobs on the roster
 - Auth and technician day view

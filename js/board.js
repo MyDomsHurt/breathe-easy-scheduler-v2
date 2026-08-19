@@ -105,3 +105,4 @@ export function renderDayBoard(el, { jobs, chipJobs, date, teams }) {
     <div class="day-roster" style="--cols:${teams.length}">${cols}</div>
   </div>`;
 }
+
