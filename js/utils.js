@@ -33,11 +33,13 @@ export function weekDays(mondayIso) {
 
 export function formatDay(iso, opts = {}) {
   const d = parseISO(iso);
-  return d.toLocaleDateString('en-HK', {
+  const fmt = {
     weekday: opts.weekday || 'short',
     day: 'numeric',
     month: opts.month || 'short',
-  });
+  };
+  if (opts.year) fmt.year = opts.year;
+  return d.toLocaleDateString('en-HK', fmt);
 }
 
 export function workWeekDays(mondayIso) {

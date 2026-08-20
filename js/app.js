@@ -1,5 +1,5 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
-import { addDays, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
+import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
 import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore } from './store.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
@@ -38,7 +38,11 @@ function paint() {
   if (!label || !mount) return;
   const jobs = filteredJobs();
   const days = workWeekDays(state.monday);
-  label.textContent = formatWeekLabel(state.monday);
+  label.textContent = state.mode === 'day'
+    ? formatDay(state.day, { weekday: 'short', year: 'numeric' })
+    : formatWeekLabel(state.monday);
+  $('prevWeek').setAttribute('aria-label', state.mode === 'day' ? 'Previous day' : 'Previous week');
+  $('nextWeek').setAttribute('aria-label', state.mode === 'day' ? 'Next day' : 'Next week');
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   document.querySelectorAll('[data-nav]').forEach((el) => {
@@ -71,6 +75,7 @@ function bindBoardClicks() {
     if (dayHead) {
       state.mode = 'day';
       state.day = dayHead.dataset.openDay;
+      state.monday = mondayOf(state.day);
       paint();
       return;
     }
@@ -143,13 +148,23 @@ function bindChrome() {
     });
   });
   $('prevWeek').addEventListener('click', () => {
-    state.monday = addDays(state.monday, -7);
-    state.day = state.monday;
+    if (state.mode === 'day') {
+      state.day = addDays(state.day, -1);
+      state.monday = mondayOf(state.day);
+    } else {
+      state.monday = addDays(state.monday, -7);
+      state.day = state.monday;
+    }
     paint();
   });
   $('nextWeek').addEventListener('click', () => {
-    state.monday = addDays(state.monday, 7);
-    state.day = state.monday;
+    if (state.mode === 'day') {
+      state.day = addDays(state.day, 1);
+      state.monday = mondayOf(state.day);
+    } else {
+      state.monday = addDays(state.monday, 7);
+      state.day = state.monday;
+    }
     paint();
   });
   $('thisWeek').addEventListener('click', () => {
