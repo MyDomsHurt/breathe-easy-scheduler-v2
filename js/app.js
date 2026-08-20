@@ -1,7 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
-import { addDays, formatMoney, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
+import { addDays, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
 import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore } from './store.js';
-import { weekStats } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList } from './jobs.js';
@@ -51,15 +50,6 @@ function paint() {
 
   if (state.view === 'board') {
     const rosterJobs = teamJobs();
-    const stats = weekStats(rosterJobs, state.mode === 'week' ? days : [state.day], state.teams);
-    $('statsStrip').innerHTML = `
-      <div class="stat"><b>${stats.total}</b><span>jobs</span></div>
-      <div class="stat"><b>${stats.emptyCells}</b><span>empty team-days</span></div>
-      <div class="stat"><b>${stats.cleans}</b><span>cleans</span></div>
-      <div class="stat"><b>${stats.returns}</b><span>returns</span></div>
-      <div class="stat"><b>${stats.influencers}</b><span>influencer</span></div>
-      <div class="stat"><b>${formatMoney(stats.revenue)}</b><span>booked revenue</span></div>
-    `;
     if (state.mode === 'week') {
       renderWeekBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, days, teams: state.teams });
     } else {

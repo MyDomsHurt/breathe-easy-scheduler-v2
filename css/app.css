@@ -766,24 +766,6 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 .toast.show { display: block; }
 
-.stats-strip {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 10px 0 12px;
-}
-
-.stat {
-  background: white;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 8px 10px;
-  min-width: 110px;
-}
-
-.stat b { display: block; font-size: 16px; }
-.stat span { font-size: 11px; color: var(--muted); font-weight: 600; }
-
 @media (max-width: 800px) {
   .header-inner { flex-wrap: wrap; }
   .brand { min-width: 0; }

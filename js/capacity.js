@@ -1,5 +1,5 @@
 import { TEAM_META, TEAMS } from './config.js';
-import { jobTypeOf, timeToMinutes } from './utils.js';
+import { timeToMinutes } from './utils.js';
 
 export function sortByTime(jobs) {
   return jobs.slice().sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
@@ -55,28 +55,4 @@ export function overlapWarning(jobs, { date, team, time }) {
   });
   if (!near) return null;
   return `${near.time || 'Another job'} already on ${team} that day`;
-}
-
-export function weekStats(jobs, days, teams) {
-  const set = new Set(days);
-  const teamSet = new Set(teams);
-  const weekJobs = jobs.filter((j) => set.has(j.date) && teamSet.has(j.team_lead));
-  const cleans = weekJobs.filter((j) => jobTypeOf(j) === 'cleaning');
-  const returns = weekJobs.filter((j) => jobTypeOf(j) === 'return');
-  const influencers = weekJobs.filter((j) => jobTypeOf(j) === 'influencer');
-  const revenue = cleans.reduce((n, j) => n + (j.amount || 0), 0);
-  let emptyCells = 0;
-  for (const date of days) {
-    for (const team of teams) {
-      if (jobsForTeamDay(weekJobs, date, team).length === 0) emptyCells += 1;
-    }
-  }
-  return {
-    total: weekJobs.length,
-    cleans: cleans.length,
-    returns: returns.length,
-    influencers: influencers.length,
-    revenue,
-    emptyCells,
-  };
 }
