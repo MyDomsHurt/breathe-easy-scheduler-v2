@@ -1,5 +1,50 @@
 import { DISTRICTS, TEAM_META } from './config.js';
-import { formatDay, formatMoney, jobTypeOf } from './utils.js';
+import { esc, formatDay, formatMoney, jobTypeOf, shortAddress, shortTime } from './utils.js';
+
+export function searchJobs(jobs, query, limit = 8) {
+  const s = String(query || '').trim().toLowerCase();
+  if (s.length < 2) return [];
+  const hits = [];
+  for (const j of jobs) {
+    const hay = [j.client_name, j.mobile, j.address, j.district, j.notes, j.invoice, j.job_id, j.acs, j.team_lead]
+      .join(' ')
+      .toLowerCase();
+    if (hay.includes(s)) hits.push(j);
+    if (hits.length >= limit) break;
+  }
+  return hits;
+}
+
+export function renderSearchHits(el, jobs, query) {
+  if (!el) return [];
+  const s = String(query || '').trim();
+  if (s.length < 2) {
+    el.hidden = true;
+    el.innerHTML = '';
+    return [];
+  }
+  const hits = searchJobs(jobs, s, 8);
+  if (!hits.length) {
+    el.hidden = false;
+    el.innerHTML = `<div class="search-empty">No matches</div>`;
+    return [];
+  }
+  el.hidden = false;
+  el.innerHTML = hits.map((j) => {
+    const type = jobTypeOf(j);
+    const mark = type === 'return' ? 'RET' : type === 'influencer' ? 'INF' : (j.acs || '');
+    return `<button type="button" class="search-hit" data-jump-job="${esc(j.job_id)}">
+      <div class="search-hit-top">
+        <strong>${esc(formatDay(j.date))}</strong>
+        <span>${esc(shortTime(j))}</span>
+        <span>${esc(j.team_lead || '')}</span>
+        <span>${esc(j.district || '')}</span>
+      </div>
+      <div class="search-hit-sub">${esc(shortAddress(j))} · ${esc(mark || '—')}</div>
+    </button>`;
+  }).join('');
+  return hits;
+}
 
 export function renderJobsList(el, jobs, query) {
   const q = String(query || '').trim().toLowerCase();

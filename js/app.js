@@ -1,9 +1,9 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
-import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, workWeekDays } from './utils.js';
+import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, workWeekDays } from './utils.js';
 import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore } from './store.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
-import { renderJobModal, renderJobsList } from './jobs.js';
+import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
 
 const state = {
   view: 'board',
@@ -14,6 +14,7 @@ const state = {
   districts: [],
   types: [],
   query: '',
+  focusJobId: '',
 };
 
 function $(id) {
@@ -43,6 +44,8 @@ function paint() {
     : formatWeekLabel(state.monday);
   $('prevWeek').setAttribute('aria-label', state.mode === 'day' ? 'Previous day' : 'Previous week');
   $('nextWeek').setAttribute('aria-label', state.mode === 'day' ? 'Next day' : 'Next week');
+  const monthSel = $('monthSelect');
+  if (monthSel) monthSel.value = monthKey(state.mode === 'day' ? state.day : state.monday);
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   document.querySelectorAll('[data-nav]').forEach((el) => {
@@ -62,6 +65,48 @@ function paint() {
   } else {
     renderJobsList($('jobsMount'), jobs, state.query);
   }
+  focusJobOnBoard();
+}
+
+function focusJobOnBoard() {
+  if (!state.focusJobId || state.view !== 'board') return;
+  const el = document.querySelector(`#boardMount [data-job="${CSS.escape(state.focusJobId)}"]`);
+  if (!el) return;
+  el.classList.add('is-focus');
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function goToJob(job) {
+  if (!job) return;
+  state.view = 'board';
+  state.mode = 'week';
+  state.monday = mondayOf(job.date);
+  state.day = job.date;
+  state.focusJobId = job.job_id;
+  hideSearchHits();
+  paint();
+  renderJobModal($('modalRoot'), job);
+}
+
+function hideSearchHits() {
+  const box = $('searchHits');
+  if (!box) return;
+  box.hidden = true;
+}
+
+function fillMonthSelect() {
+  const sel = $('monthSelect');
+  if (!sel) return;
+  const base = parseISO(TODAY);
+  const opts = [];
+  for (let i = -8; i <= 8; i += 1) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+    const value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+    const label = d.toLocaleDateString('en-HK', { month: 'short', year: 'numeric' });
+    opts.push(`<option value="${value}">${label}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  sel.value = monthKey(state.monday);
 }
 
 function bindBoardClicks() {
@@ -133,7 +178,7 @@ function bindChrome() {
     el.addEventListener('click', (e) => {
       e.preventDefault();
       state.view = el.dataset.nav;
-      if (state.view === 'jobs') $('jobSearch')?.focus();
+      if (state.view === 'jobs') $('globalSearch')?.focus();
       paint();
     });
   });
@@ -172,13 +217,18 @@ function bindChrome() {
     state.day = TODAY;
     paint();
   });
+  $('monthSelect').addEventListener('change', (e) => {
+    const value = e.target.value;
+    if (!value) return;
+    state.monday = mondayOfMonth(value);
+    state.day = state.monday;
+    state.focusJobId = '';
+    paint();
+  });
   $('newBooking').addEventListener('click', () => {
     openBooking({ date: state.mode === 'day' ? state.day : TODAY });
   });
-  $('jobSearch').addEventListener('input', (e) => {
-    state.query = e.target.value;
-    paint();
-  });
+  bindSearch();
   $('resetDemo').addEventListener('click', () => {
     if (confirm('Reset prototype bookings back to the seed schedule?')) {
       resetDemo();
@@ -213,6 +263,11 @@ function bindChrome() {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const hits = $('searchHits');
+      if (hits && !hits.hidden) {
+        hideSearchHits();
+        return;
+      }
       closeBooking();
       renderJobModal($('modalRoot'), null);
     }
@@ -237,6 +292,38 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove('show'), 2600);
 }
 
+function bindSearch() {
+  const input = $('globalSearch');
+  const box = $('searchHits');
+  if (!input || !box) return;
+  input.addEventListener('input', () => {
+    state.query = input.value;
+    renderSearchHits(box, allJobs(), state.query);
+    if (state.view === 'jobs') paint();
+  });
+  input.addEventListener('focus', () => {
+    renderSearchHits(box, allJobs(), input.value);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const first = box.querySelector('[data-jump-job]');
+    if (!first) return;
+    e.preventDefault();
+    goToJob(getJob(first.dataset.jumpJob));
+  });
+  box.addEventListener('mousedown', (e) => {
+    const btn = e.target.closest('[data-jump-job]');
+    if (!btn) return;
+    e.preventDefault();
+    goToJob(getJob(btn.dataset.jumpJob));
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.header-search')) return;
+    hideSearchHits();
+  });
+}
+
+fillMonthSelect();
 bindFilters();
 bindChrome();
 bindBoardClicks();

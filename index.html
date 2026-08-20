@@ -25,12 +25,16 @@
         <button data-nav="jobs">Jobs</button>
       </nav>
 
-      <div class="header-spacer"></div>
+      <div class="header-search">
+        <input id="globalSearch" type="search" placeholder="Search name, mobile, address, invoice…" autocomplete="off" />
+        <div id="searchHits" class="search-hits" hidden></div>
+      </div>
 
       <div class="week-nav">
         <button class="icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
         <div class="week-label" id="weekLabel">This week</div>
         <button class="icon-btn" id="nextWeek" aria-label="Next week">›</button>
+        <select id="monthSelect" class="month-select" aria-label="Month"></select>
         <button class="ghost-btn" id="thisWeek">Today</button>
         <button class="ghost-btn on" data-mode="week">Week</button>
         <button class="ghost-btn" data-mode="day">Day</button>
@@ -60,9 +64,6 @@
     </section>
 
     <section id="viewJobs" hidden>
-      <div class="jobs-toolbar">
-        <input class="search" id="jobSearch" type="search" placeholder="Search client, mobile, address, invoice…" />
-      </div>
       <div id="jobsMount"></div>
     </section>
 

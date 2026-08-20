@@ -2,7 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAM_META, UNIT_TYPES } from './config.
 import { overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, emptyUnits, formatDay, parseAcs } from './utils.js';
+import { acsLabel, acsTotal, districtChipsHtml, emptyUnits, formatDay, parseAcs } from './utils.js';
 
 let form = {
   job_id: '',
@@ -160,7 +160,7 @@ function renderForm() {
                 <span class="bar"></span>
                 <span>
                   <strong>${r.team}</strong>
-                  ${r.dayDistricts.length ? `<div class="meta">already in ${r.dayDistricts.join(', ')}</div>` : ''}
+                  ${r.dayDistricts.length ? `<div class="meta">${districtChipsHtml(r.dayDistricts)}</div>` : ''}
                 </span>
                 <span>
                   ${i === 0 ? '<span class="badge">Best</span>' : ''}

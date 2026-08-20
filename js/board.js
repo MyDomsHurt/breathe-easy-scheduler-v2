@@ -1,6 +1,6 @@
 import { TEAM_META } from './config.js';
-import { jobsForTeamDay, teamMembersOnDay } from './capacity.js';
-import { esc, formatDay, formatMoney, isToday, isWeekend, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
+import { districtsForTeamOnDay, jobsForTeamDay, teamMembersOnDay } from './capacity.js';
+import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
@@ -62,15 +62,15 @@ function cardHtml(job) {
 function cellHtml(allJobs, displayJobs, date, team, mode) {
   const list = jobsForTeamDay(allJobs, date, team);
   const shown = jobsForTeamDay(displayJobs, date, team);
-  const members = teamMembersOnDay(allJobs, date, team);
   const empty = list.length === 0;
+  const districts = empty ? [] : districtsForTeamOnDay(allJobs, date, team);
   const body = mode === 'day'
     ? shown.map(cardHtml).join('')
     : shown.map(chipHtml).join('');
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <span class="cell-status">${empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')}</span>
-      ${mode === 'week' ? `<span class="cell-members">${members}</span>` : ''}
+      ${districtChipsHtml(districts)}
     </div>
     <div class="job-chips">${body}</div>
     <button class="book-here" data-book-date="${date}" data-book-team="${team}" type="button">+ Add</button>

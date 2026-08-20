@@ -1,4 +1,4 @@
-import { TODAY, UNIT_TYPES } from './config.js';
+import { DISTRICTS, TODAY, UNIT_TYPES } from './config.js';
 
 export function pad(n) {
   return String(n).padStart(2, '0');
@@ -56,6 +56,25 @@ export function formatWeekLabel(mondayIso) {
   return sameMonth
     ? `${a.getDate()}–${right}`
     : `${left} – ${right}`;
+}
+
+export function mondayOfMonth(yearMonth) {
+  return mondayOf(`${yearMonth}-01`);
+}
+
+export function monthKey(iso) {
+  return String(iso || '').slice(0, 7);
+}
+
+export function districtChipsHtml(districts) {
+  const list = [...new Set((districts || []).filter(Boolean))];
+  if (!list.length) return '';
+  return `<span class="dist-chips">${list.map((d) => {
+    const meta = DISTRICTS[d];
+    const bg = meta?.bg || '#e2e8f0';
+    const ink = meta?.text || '#334155';
+    return `<span class="dist-chip" style="background:${bg};color:${ink}">${esc(d)}</span>`;
+  }).join('')}</span>`;
 }
 
 export function isToday(iso) {
