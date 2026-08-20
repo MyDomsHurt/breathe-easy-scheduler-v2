@@ -79,6 +79,71 @@ export function timeToMinutes(t) {
   return h * 60 + min;
 }
 
+function rawTime(job) {
+  if (job == null) return '';
+  if (typeof job === 'object') return job.time;
+  return job;
+}
+
+function formatClock(token, fallbackAp) {
+  const s = String(token || '').toLowerCase().replace(/\s+/g, '');
+  const m = s.match(/^(\d{1,2})(?:[:.](\d{2}))?(?:[:.]\d{2})?(am|pm)?$/);
+  if (!m) return '';
+  let h = parseInt(m[1], 10);
+  const min = m[2] != null ? parseInt(m[2], 10) : 0;
+  let ap = m[3] || fallbackAp || '';
+  if (!ap) {
+    if (h === 12) ap = 'pm';
+    else if (h >= 8 && h <= 11) ap = 'am';
+    else if (h >= 13 && h <= 23) {
+      h -= 12;
+      ap = 'pm';
+    } else {
+      ap = 'pm';
+    }
+  }
+  if (h === 0) {
+    h = 12;
+    ap = 'am';
+  } else if (h > 12) {
+    h -= 12;
+    if (!m[3]) ap = 'pm';
+  }
+  return `${String(h).padStart(2, '0')}.${String(min).padStart(2, '0')}${ap}`;
+}
+
+/** Card start time: 09.00am. Ranges and “11.30am => 10.30am” use the actual start. */
+export function shortTime(job) {
+  const raw = String(rawTime(job) || '').trim();
+  if (!raw) return '—';
+  const current = raw.split(/\s*=>\s*/).pop().trim();
+  const apMatch = current.match(/[ap]m/i);
+  const ap = apMatch ? apMatch[0].toLowerCase() : '';
+  const start = current.split(/\s*-\s*/)[0].trim();
+  return formatClock(start, ap) || raw;
+}
+
+export function shortAddress(job, max = 42) {
+  let s = String(job && job.address || '').replace(/\s+/g, ' ').trim();
+  if (!s) s = String(job && job.district || '').trim();
+  if (!s) return '—';
+  if (s.length > max) return `${s.slice(0, max - 1).trim()}…`;
+  return s;
+}
+
+export function shortNotes(job, max = 96) {
+  let s = String(job && job.notes || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  s = s.replace(/https?:\/\/\S+/gi, '');
+  s = s.replace(/\bpin:\s*/gi, '');
+  s = s.replace(/\bR[,.]?Q\b/gi, 'RQ');
+  s = s.replace(/\s*\/\/\s*/g, ' // ');
+  s = s.replace(/\s{2,}/g, ' ').replace(/^\/\/\s*|\s*\/\/$/g, '').trim();
+  if (!s) return '';
+  if (s.length > max) return `${s.slice(0, max - 1).trim()}…`;
+  return s;
+}
+
 export function parseAcs(acs) {
   const counts = { S: 0, W: 0, B: 0, C: 0 };
   if (!acs) return counts;

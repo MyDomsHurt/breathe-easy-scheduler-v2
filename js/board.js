@@ -1,43 +1,61 @@
 import { TEAM_META } from './config.js';
 import { jobsForTeamDay, teamMembersOnDay } from './capacity.js';
-import { firstName, formatDay, formatMoney, isToday, isWeekend, jobTypeOf } from './utils.js';
+import { esc, formatDay, formatMoney, isToday, isWeekend, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
 }
 
-function displayTime(job) {
-  return job.time && String(job.time).trim() ? job.time : '—';
+function typeMark(type, compact) {
+  if (type === 'return') return `<span class="tag return">${compact ? 'RET' : 'RETURN'}</span>`;
+  if (type === 'influencer') return `<span class="tag influencer">${compact ? 'INF' : 'INFLUENCER'}</span>`;
+  return '';
+}
+
+function rightMark(job, type, compact) {
+  if (type !== 'cleaning') return typeMark(type, compact);
+  return job.acs ? `<span class="acs">${esc(job.acs)}</span>` : '';
+}
+
+function hoverTitle(job) {
+  return [job.client_name, job.time, job.acs, job.address, job.notes]
+    .filter((x) => x != null && String(x).trim())
+    .join(' · ');
 }
 
 function chipHtml(job) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
-  const tag = extra ? `<span class="tag ${extra}">${extra === 'return' ? 'RET' : 'INF'}</span>` : '';
-  const acs = extra === 'return' ? '' : `<span class="acs">${job.acs || ''}</span>`;
-  return `<button class="job-chip ${extra}" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${job.client_name} · ${displayTime(job)}">
-    <span class="when">${displayTime(job)}</span>
-    ${tag}<span class="who">${firstName(job.client_name)}</span>${acs}
+  const notes = shortNotes(job);
+  const notesRow = notes ? `<div class="chip-notes">${esc(notes)}</div>` : '';
+  return `<button class="job-chip ${extra}" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+    <div class="chip-top">
+      <span class="when">${esc(shortTime(job))}</span>
+      ${rightMark(job, type, true)}
+    </div>
+    <div class="chip-addr">${esc(shortAddress(job))}</div>
+    ${notesRow}
   </button>`;
 }
 
 function cardHtml(job) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
-  const tag = extra ? `<span class="tag ${extra}">${extra === 'return' ? 'RETURN' : 'INFLUENCER'}</span>` : '';
+  const notes = shortNotes(job, 140);
+  const notesRow = notes ? `<p class="card-notes">${esc(notes)}</p>` : '';
   const money = type === 'cleaning' && job.amount != null
-    ? `<span class="acs">${formatMoney(job.amount)}</span>` : '';
-  const notes = job.notes
-    ? `<p class="card-notes">${String(job.notes).slice(0, 90)}</p>` : '';
-  return `<button class="job-card ${extra}" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}">
+    ? `<span class="card-money">${formatMoney(job.amount)}</span>` : '';
+  const who = job.client_name
+    ? `<div class="who">${esc(job.client_name)}</div>` : '';
+  return `<button class="job-card ${extra}" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="card-top">
-      <strong class="when">${displayTime(job)}</strong>
-      ${tag}${money}
+      <strong class="when">${esc(shortTime(job))}</strong>
+      ${rightMark(job, type, false)}
     </div>
-    <div class="who">${job.client_name}</div>
-    <div class="card-meta">${job.acs || (extra === 'return' ? 'Return' : '—')} · ${job.district || ''}</div>
-    <div class="card-meta">${job.address || ''}</div>
-    ${notes}
+    <div class="card-addr">${esc(shortAddress(job, 56))}</div>
+    ${who}
+    ${notesRow}
+    ${money}
   </button>`;
 }
 
