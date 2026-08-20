@@ -258,12 +258,16 @@ function bindForm() {
 
 function renderHits(q) {
   const box = $('#clientHits');
-  const clients = uniqueClientsFrom(allJobs());
   const s = String(q || '').trim().toLowerCase();
-  const hits = clients.filter((c) => {
-    if (!s) return true;
-    return `${c.name} ${c.mobile} ${c.address}`.toLowerCase().includes(s);
-  }).slice(0, 7);
+  if (s.length < 2) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  const clients = uniqueClientsFrom(allJobs());
+  const hits = clients.filter((c) => (
+    `${c.name} ${c.mobile} ${c.address}`.toLowerCase().includes(s)
+  )).slice(0, 7);
   if (!hits.length) {
     box.hidden = true;
     box.innerHTML = '';
