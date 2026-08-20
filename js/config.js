@@ -63,10 +63,14 @@ export const DISTRICTS = {
 };
 
 export const UNIT_TYPES = [
-  { id: 'S', label: 'Split', price: 580 },
-  { id: 'W', label: 'Window', price: 480 },
-  { id: 'B', label: 'Built-in', price: 980 },
-  { id: 'C', label: 'Cassette', price: 1180 },
+  { id: 'S', label: 'Split' },
+  { id: 'W', label: 'Window' },
+  { id: 'B', label: 'Built-in' },
+  { id: 'C', label: 'Cassette' },
+  { id: 'BEP', label: 'BEP' },
+  { id: 'UC', label: 'UC' },
+  { id: 'OU', label: 'Outdoor unit' },
+  { id: 'SwG', label: 'SwG' },
 ];
 
 export const JOB_TYPES = [

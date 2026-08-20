@@ -146,16 +146,30 @@ export function shortNotes(job, max = 96) {
   return s;
 }
 
+const ACS_ALIASES = {
+  S: 'S',
+  W: 'W',
+  B: 'B',
+  C: 'C',
+  BEP: 'BEP',
+  UC: 'UC',
+  OU: 'OU',
+  SWG: 'SwG',
+  SW: 'SwG',
+};
+
+export function emptyUnits() {
+  return Object.fromEntries(UNIT_TYPES.map((u) => [u.id, 0]));
+}
+
 export function parseAcs(acs) {
-  const counts = { S: 0, W: 0, B: 0, C: 0 };
+  const counts = emptyUnits();
   if (!acs) return counts;
   const re = /(\d+)\s*([A-Za-z]+)/g;
   let m;
   while ((m = re.exec(String(acs))) !== null) {
-    let t = m[2].toUpperCase();
-    if (t === 'BEP') continue;
-    if (t === 'SWG' || t === 'SW') continue;
-    if (t in counts) counts[t] += parseInt(m[1], 10);
+    const id = ACS_ALIASES[m[2].toUpperCase()];
+    if (id) counts[id] = (counts[id] || 0) + parseInt(m[1], 10);
   }
   return counts;
 }

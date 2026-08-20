@@ -2,7 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAM_META, UNIT_TYPES } from './config.
 import { overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, formatDay, parseAcs } from './utils.js';
+import { acsLabel, acsTotal, emptyUnits, formatDay, parseAcs } from './utils.js';
 
 let form = {
   job_id: '',
@@ -10,7 +10,7 @@ let form = {
   mobile: '',
   address: '',
   district: '',
-  units: { S: 0, W: 0, B: 0, C: 0 },
+  units: emptyUnits(),
   date: '',
   time: '',
   team_lead: 'Josh',
@@ -27,8 +27,10 @@ function $(sel) {
 export function openBooking(prefill = {}) {
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
-  const units = prefill.units
-    || (prefill.acs != null || editing ? parseAcs(prefill.acs) : { S: 2, W: 0, B: 0, C: 0 });
+  const units = {
+    ...emptyUnits(),
+    ...(prefill.units || (prefill.acs != null || editing ? parseAcs(prefill.acs) : {})),
+  };
   form = {
     job_id: prefill.job_id || '',
     client_name: prefill.client_name || '',
@@ -48,7 +50,7 @@ export function openBooking(prefill = {}) {
     source: prefill.source,
   };
   if (!form.date) form.date = new Date().toISOString().slice(0, 10);
-  if (form.job_type !== 'cleaning') form.units = { S: 0, W: 0, B: 0, C: 0 };
+  if (form.job_type !== 'cleaning') form.units = emptyUnits();
   if (!form.team_lead) {
     const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
     form.team_lead = ranked[0]?.team || 'Josh';
@@ -124,8 +126,8 @@ function renderForm() {
           <div class="stepper-row">
             ${UNIT_TYPES.map((u) => `
               <div class="stepper">
-                <span>${u.label} <small style="color:#64748b">${u.id}</small></span>
-                <div style="display:flex;gap:6px;align-items:center">
+                <span class="stepper-name">${u.label} <small>${u.id}</small></span>
+                <div class="stepper-ctrl">
                   <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
                   <strong>${form.units[u.id] || 0}</strong>
                   <button type="button" data-unit="${u.id}" data-delta="1">+</button>
