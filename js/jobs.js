@@ -1,5 +1,11 @@
 import { DISTRICTS, TEAM_META } from './config.js';
-import { esc, formatDay, formatMoney, jobTypeOf, shortAddress, shortTime } from './utils.js';
+import { esc, formatDay, formatMoney, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
+
+function displayMobile(mobile) {
+  const d = String(mobile || '').replace(/\s+/g, '');
+  if (d.length === 8) return `${d.slice(0, 4)} ${d.slice(4)}`;
+  return d;
+}
 
 export function searchJobs(jobs, query, limit = 8) {
   const s = String(query || '').trim().toLowerCase();
@@ -33,14 +39,17 @@ export function renderSearchHits(el, jobs, query) {
   el.innerHTML = hits.map((j) => {
     const type = jobTypeOf(j);
     const mark = type === 'return' ? 'RET' : type === 'influencer' ? 'INF' : (j.acs || '');
+    const when = [formatDay(j.date), shortTime(j), j.team_lead, j.district].filter(Boolean).join(' · ');
+    const place = [shortAddress(j), mark].filter(Boolean).join(' · ');
+    const notes = shortNotes(j, 72);
     return `<button type="button" class="search-hit" data-jump-job="${esc(j.job_id)}">
-      <div class="search-hit-top">
-        <strong>${esc(formatDay(j.date))}</strong>
-        <span>${esc(shortTime(j))}</span>
-        <span>${esc(j.team_lead || '')}</span>
-        <span>${esc(j.district || '')}</span>
+      <div class="search-hit-id">
+        <strong>${esc(j.client_name || 'Job')}</strong>
+        ${j.mobile ? `<span class="search-hit-mobile">${esc(displayMobile(j.mobile))}</span>` : ''}
       </div>
-      <div class="search-hit-sub">${esc(shortAddress(j))} · ${esc(mark || '—')}</div>
+      <div class="search-hit-when">${esc(when)}</div>
+      <div class="search-hit-place">${esc(place)}</div>
+      ${notes ? `<div class="search-hit-notes">${esc(notes)}</div>` : ''}
     </button>`;
   }).join('');
   return hits;
