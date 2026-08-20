@@ -126,7 +126,7 @@ function renderForm() {
           <div class="stepper-row">
             ${UNIT_TYPES.map((u) => `
               <div class="stepper">
-                <span class="stepper-name">${u.label} <small>${u.id}</small></span>
+                <span class="stepper-name">${u.id}</span>
                 <div class="stepper-ctrl">
                   <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
                   <strong>${form.units[u.id] || 0}</strong>

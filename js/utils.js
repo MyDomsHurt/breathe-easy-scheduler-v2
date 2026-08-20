@@ -151,7 +151,6 @@ const ACS_ALIASES = {
   W: 'W',
   B: 'B',
   C: 'C',
-  BEP: 'BEP',
   UC: 'UC',
   OU: 'OU',
   SWG: 'SwG',
