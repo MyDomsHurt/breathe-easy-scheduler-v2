@@ -173,11 +173,6 @@ export function acsTotal(countsOrString) {
   return UNIT_TYPES.reduce((n, u) => n + (counts[u.id] || 0), 0);
 }
 
-export function estimateAmount(counts, jobType) {
-  if (jobType === 'influencer' || jobType === 'return') return 0;
-  return UNIT_TYPES.reduce((n, u) => n + (counts[u.id] || 0) * u.price, 0);
-}
-
 export function jobTypeOf(job) {
   if (job.job_type) return job.job_type;
   if (job.is_return) return 'return';

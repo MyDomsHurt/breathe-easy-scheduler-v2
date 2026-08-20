@@ -1,6 +1,6 @@
 import { STORAGE_KEY, TEAM_META } from './config.js';
 import { loadSeedJobs, buildSeedJobs } from './seed.js';
-import { acsLabel, estimateAmount, jobTypeOf, uid, weekNumber } from './utils.js';
+import { acsLabel, jobTypeOf, uid, weekNumber } from './utils.js';
 
 const listeners = new Set();
 
@@ -57,7 +57,9 @@ function buildJob(input, prev) {
     address: input.address || '',
     acs: type === 'return' ? '' : acs,
     notes: input.notes || null,
-    amount: type === 'cleaning' ? (input.amount ?? estimateAmount(input.units || {}, type)) : null,
+    amount: type === 'cleaning'
+      ? (input.amount === '' || input.amount == null ? (base.amount ?? null) : Number(input.amount))
+      : null,
     invoice: input.invoice !== undefined ? input.invoice : (base.invoice || null),
     receipt: input.receipt !== undefined ? input.receipt : (base.receipt || null),
     payment: input.payment || 'Unpaid',

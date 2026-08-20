@@ -2,7 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAM_META, UNIT_TYPES } from './config.
 import { overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, estimateAmount, formatDay, parseAcs } from './utils.js';
+import { acsLabel, acsTotal, formatDay, parseAcs } from './utils.js';
 
 let form = {
   job_id: '',
@@ -18,7 +18,6 @@ let form = {
   amount: '',
   payment: 'Unpaid',
   notes: '',
-  lockAmount: false,
 };
 
 function $(sel) {
@@ -44,7 +43,6 @@ export function openBooking(prefill = {}) {
     amount: prefill.amount != null && prefill.amount !== '' ? prefill.amount : '',
     payment: prefill.payment || 'Unpaid',
     notes: prefill.notes || '',
-    lockAmount: editing && prefill.amount != null,
     invoice: prefill.invoice,
     receipt: prefill.receipt,
     source: prefill.source,
@@ -68,22 +66,12 @@ export function closeBooking() {
   root.setAttribute('aria-hidden', 'true');
 }
 
-function syncAmount() {
-  if (form.job_type !== 'cleaning') {
-    form.amount = 0;
-    return;
-  }
-  if (form.lockAmount) return;
-  form.amount = estimateAmount(form.units, form.job_type);
-}
-
 function others() {
   return allJobs().filter((j) => j.job_id !== form.job_id);
 }
 
 function renderForm() {
   const jobs = others();
-  syncAmount();
   const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
   if (form.team_lead && !ranked.find((r) => r.team === form.team_lead)) {
     form.team_lead = ranked[0]?.team || form.team_lead;
@@ -145,7 +133,7 @@ function renderForm() {
               </div>`).join('')}
           </div>
           <div style="margin-top:8px;font-size:12px;color:#64748b;font-weight:600">
-            ${form.job_type === 'cleaning' ? (acsLabel(form.units) || 'No units yet') + ' · est. ' + money(form.amount) : 'Units not required for this job type'}
+            ${form.job_type === 'cleaning' ? (acsLabel(form.units) || 'No units yet') : 'Units not required for this job type'}
           </div>
         </div>
 
@@ -198,7 +186,7 @@ function renderForm() {
         <div class="grid-2">
           <div class="field">
             <label>Amount (HKD)</label>
-            <input id="amountInput" type="number" min="0" step="10" value="${form.amount || 0}" />
+            <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="Enter amount" />
           </div>
           <div class="field">
             <label>Notes</label>
@@ -235,8 +223,7 @@ function bindForm() {
   $('#typeInput').addEventListener('change', (e) => { form.job_type = e.target.value; renderForm(); });
   $('#payInput').addEventListener('change', (e) => { form.payment = e.target.value; });
   $('#amountInput').addEventListener('input', (e) => {
-    form.amount = Number(e.target.value || 0);
-    form.lockAmount = true;
+    form.amount = e.target.value === '' ? '' : Number(e.target.value);
   });
   $('#notesInput').addEventListener('input', (e) => { form.notes = e.target.value; });
   root.querySelectorAll('[data-unit]').forEach((btn) => {
@@ -244,7 +231,6 @@ function bindForm() {
       const id = btn.dataset.unit;
       const delta = Number(btn.dataset.delta);
       form.units[id] = Math.max(0, (form.units[id] || 0) + delta);
-      form.lockAmount = false;
       renderForm();
     });
   });
@@ -317,7 +303,9 @@ function save() {
     notes,
     time: String(form.time || '').trim(),
     team_members: teamMembersOnDay(allJobs(), form.date, form.team_lead),
-    amount: form.job_type === 'cleaning' ? Number(form.amount || 0) : null,
+    amount: form.job_type === 'cleaning'
+      ? (form.amount === '' || form.amount == null ? null : Number(form.amount))
+      : null,
   };
   const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);
   closeBooking();
@@ -345,6 +333,4 @@ function escapeAttr(s) {
     .replace(/</g, '&lt;');
 }
 
-function money(n) {
-  return '$' + Math.round(Number(n || 0)).toLocaleString('en-HK');
-}
+
