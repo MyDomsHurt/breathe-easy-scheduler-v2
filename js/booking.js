@@ -80,7 +80,7 @@ function renderForm() {
   }
   const best = ranked[0];
   const warn = overlapWarning(jobs, { date: form.date, team: form.team_lead, time: form.time });
-  const members = teamMembersOnDay(allJobs(), form.date, form.team_lead);
+  const selectedJobs = ranked.find((r) => r.team === form.team_lead)?.jobCount || 0;
   const editing = Boolean(form.job_id);
 
   $('#bookingRoot').innerHTML = `
@@ -160,7 +160,7 @@ function renderForm() {
                 <span class="bar"></span>
                 <span>
                   <strong>${r.team}</strong>
-                  <div class="meta">${r.members}${r.dayDistricts.length ? ' · already in ' + r.dayDistricts.join(', ') : ''}</div>
+                  ${r.dayDistricts.length ? `<div class="meta">already in ${r.dayDistricts.join(', ')}</div>` : ''}
                 </span>
                 <span>
                   ${i === 0 ? '<span class="badge">Best</span>' : ''}
@@ -168,7 +168,7 @@ function renderForm() {
                 </span>
               </button>`).join('')}
           </div>
-          <div class="capacity-live" style="margin-top:8px">${form.team_lead} · ${members} · ${ranked.find((r) => r.team === form.team_lead)?.jobCount || 0} jobs this day${best && best.team !== form.team_lead ? ' · Suggested: <b>' + best.team + '</b>' : ''}</div>
+          <div class="capacity-live" style="margin-top:8px">${form.team_lead} · ${selectedJobs} job${selectedJobs === 1 ? '' : 's'} this day${best && best.team !== form.team_lead ? ' · Suggested: <b>' + best.team + '</b>' : ''}</div>
         </div>
 
         <div class="grid-2">
