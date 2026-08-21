@@ -67,6 +67,9 @@ function buildJob(input, prev) {
     district: input.district || '',
     job_type: type,
     source: base.source || input.source || 'local',
+    stack_order: input.stack_order != null && input.stack_order !== ''
+      ? Number(input.stack_order)
+      : (base.stack_order ?? null),
   };
 }
 

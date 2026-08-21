@@ -59,7 +59,16 @@
   </div>
 
   <main class="page">
-    <section id="viewBoard">
+    <section id="viewBoard" class="board-layout">
+      <aside class="appt-tray" aria-label="New appointment">
+        <div class="tray-label">Drag onto a team-day</div>
+        <button type="button" class="blank-appt" id="blankAppt" draggable="true">
+          <div class="blank-appt-kicker">New appointment</div>
+          <div class="blank-line"></div>
+          <div class="blank-line short"></div>
+          <div class="blank-line"></div>
+        </button>
+      </aside>
       <div id="boardMount"></div>
     </section>
 

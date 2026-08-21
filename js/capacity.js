@@ -5,8 +5,33 @@ export function sortByTime(jobs) {
   return jobs.slice().sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 }
 
+export function stackKey(job) {
+  const n = Number(job && job.stack_order);
+  if (Number.isFinite(n)) return n;
+  const mins = timeToMinutes(job && job.time);
+  return 1e6 + (mins === 9999 ? 0 : mins);
+}
+
+export function sortByStack(jobs) {
+  return jobs.slice().sort((a, b) => {
+    const d = stackKey(a) - stackKey(b);
+    if (d) return d;
+    return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+  });
+}
+
 export function jobsForTeamDay(jobs, date, team) {
-  return sortByTime(jobs.filter((j) => j.date === date && j.team_lead === team));
+  return sortByStack(jobs.filter((j) => j.date === date && j.team_lead === team));
+}
+
+export function nextStackOrder(jobs, date, team, exceptId) {
+  const list = jobs.filter((j) => j.date === date && j.team_lead === team && j.job_id !== exceptId);
+  let max = -1;
+  for (const j of list) {
+    const k = stackKey(j);
+    if (k > max) max = k;
+  }
+  return max + 1;
 }
 
 export function teamMembersOnDay(jobs, date, team) {

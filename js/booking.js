@@ -1,5 +1,5 @@
 import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAM_META, UNIT_TYPES } from './config.js';
-import { overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
+import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
 import { acsLabel, acsTotal, districtChipsHtml, emptyUnits, formatDay, parseAcs } from './utils.js';
@@ -298,16 +298,24 @@ function save() {
   const notes = form.job_type === 'influencer' && !/influencer/i.test(form.notes || '')
     ? `Influencer (Free)${form.notes ? ' — ' + form.notes : ''}`
     : form.notes;
+  const jobs = allJobs();
+  const prev = form.job_id ? jobs.find((j) => j.job_id === form.job_id) : null;
+  const keepOrder = prev
+    && prev.date === form.date
+    && prev.team_lead === form.team_lead
+    && prev.stack_order != null
+    && prev.stack_order !== '';
   const payload = {
     ...form,
     acs: form.job_type === 'cleaning' ? acsLabel(form.units) : '',
     units: form.units,
     notes,
     time: String(form.time || '').trim(),
-    team_members: teamMembersOnDay(allJobs(), form.date, form.team_lead),
+    team_members: teamMembersOnDay(jobs, form.date, form.team_lead),
     amount: form.job_type === 'cleaning'
       ? (form.amount === '' || form.amount == null ? null : Number(form.amount))
       : null,
+    stack_order: keepOrder ? prev.stack_order : nextStackOrder(jobs, form.date, form.team_lead, form.job_id),
   };
   const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);
   closeBooking();

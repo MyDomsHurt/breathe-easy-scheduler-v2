@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
 import { allJobs, getJob, redo, removeJob, resetDemo, subscribe, initStore, undo, updateJob } from './store.js';
-import { hasTimeConflict } from './capacity.js';
+import { hasTimeConflict, nextStackOrder } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
@@ -151,6 +151,20 @@ function clearDropTargets() {
 
 function bindBoardDrag() {
   const mount = $('boardMount');
+  const blank = $('blankAppt');
+  if (blank) {
+    blank.addEventListener('dragstart', (e) => {
+      dragJobId = 'new-appointment';
+      blank.classList.add('is-dragging');
+      e.dataTransfer.setData('text/plain', 'new-appointment');
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+    blank.addEventListener('dragend', () => {
+      dragJobId = '';
+      blank.classList.remove('is-dragging');
+      clearDropTargets();
+    });
+  }
   mount.addEventListener('dragstart', (e) => {
     const chip = e.target.closest('[data-job]');
     if (!chip) {
@@ -170,7 +184,7 @@ function bindBoardDrag() {
     const cell = e.target.closest('[data-date][data-team]');
     if (!cell || !dragJobId) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = dragJobId === 'new-appointment' ? 'copy' : 'move';
     if (!cell.classList.contains('drop-ok')) {
       document.querySelectorAll('#boardMount .drop-ok').forEach((el) => el.classList.remove('drop-ok'));
       cell.classList.add('drop-ok');
@@ -181,19 +195,30 @@ function bindBoardDrag() {
     const id = e.dataTransfer.getData('text/plain') || dragJobId;
     clearDropTargets();
     dragJobId = '';
+    $('blankAppt')?.classList.remove('is-dragging');
     if (!cell || !id) return;
     e.preventDefault();
     e.stopPropagation();
     suppressClick = true;
-    const job = getJob(id);
     const date = cell.dataset.date;
     const team = cell.dataset.team;
-    if (!job || !date || !team) return;
+    if (!date || !team) return;
+    if (id === 'new-appointment') {
+      openBooking({ date, team_lead: team, time: '' });
+      return;
+    }
+    const job = getJob(id);
+    if (!job) return;
     if (job.date === date && job.team_lead === team) return;
     state.monday = mondayOf(date);
     state.day = date;
     state.focusJobId = id;
-    const moved = updateJob(id, { ...job, date, team_lead: team });
+    const moved = updateJob(id, {
+      ...job,
+      date,
+      team_lead: team,
+      stack_order: nextStackOrder(allJobs(), date, team, id),
+    });
     if (!moved) return;
     if (hasTimeConflict(moved, allJobs())) {
       toast(`Moved — time conflict at ${shortTime(moved)}`);
