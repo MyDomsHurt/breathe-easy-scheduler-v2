@@ -777,42 +777,44 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .drawer-head {
-  padding: 16px 18px 12px;
+  padding: 12px 16px 10px;
   border-bottom: 1px solid var(--line);
 }
 
-.drawer-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.03em; }
-.drawer-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.drawer-head h2 { margin: 0; font-size: 17px; letter-spacing: -0.03em; }
+.drawer-head p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
 
 .drawer-body {
-  padding: 16px 18px 28px;
+  padding: 12px 16px 16px;
   overflow: auto;
   flex: 1;
 }
 
-.field { margin-bottom: 14px; }
+.field { margin-bottom: 8px; }
 .field label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .field input, .field select, .field textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 9px 11px;
-  font-size: 14px;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 13px;
   background: white;
 }
 
-.field textarea { min-height: 72px; resize: vertical; }
+.field textarea { min-height: 52px; resize: vertical; line-height: 1.35; }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.grid-2 > .field, .grid-3 > .field { margin-bottom: 8px; }
 
 .typeahead { position: relative; }
 .typeahead-list {
@@ -841,47 +843,84 @@ button.day-col-head:hover { background: #e0f2fe; }
 .typeahead-list .sub { display: block; color: var(--muted); font-size: 11px; }
 
 .stepper-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 .stepper {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 6px 7px;
+  border-radius: 8px;
+  padding: 2px 4px 2px 6px;
   background: #f8fafc;
 }
 .stepper-name {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  text-align: center;
+  text-align: left;
   line-height: 1.2;
+  min-width: 22px;
 }
 .stepper-ctrl {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
-  justify-content: space-between;
+}
+.stepper strong {
+  min-width: 12px;
+  text-align: center;
+  font-size: 12px;
 }
 .stepper button {
-  width: 26px; height: 26px;
-  border-radius: 8px;
+  width: 22px; height: 22px;
+  border-radius: 6px;
   border: 1px solid var(--line);
   background: white;
   cursor: pointer;
   font-weight: 700;
-}
-@media (max-width: 520px) {
-  .stepper-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  line-height: 1;
 }
 
 .slot-picks, .team-picks { display: grid; gap: 8px; }
 .slot-picks { grid-template-columns: 1fr 1fr; }
+
+.team-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.team-chip {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.team-chip.on {
+  background: var(--team);
+  border-color: var(--team);
+  color: white;
+}
+.team-context {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.team-warn {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #c2410c;
+}
 
 .pick, .team-card {
   border: 1px solid var(--line);
@@ -928,7 +967,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .drawer-foot {
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-top: 1px solid var(--line);
   display: flex;
   gap: 8px;

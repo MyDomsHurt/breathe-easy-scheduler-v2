@@ -1,8 +1,8 @@
-import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAM_META, UNIT_TYPES } from './config.js';
+import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js';
 import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, districtChipsHtml, emptyUnits, formatDay, parseAcs } from './utils.js';
+import { acsLabel, acsTotal, emptyUnits, formatDay, parseAcs, shortTime } from './utils.js';
 
 let form = {
   job_id: '',
@@ -80,8 +80,13 @@ function renderForm() {
   }
   const best = ranked[0];
   const warn = overlapWarning(jobs, { date: form.date, team: form.team_lead, time: form.time });
-  const selectedJobs = ranked.find((r) => r.team === form.team_lead)?.jobCount || 0;
+  const selected = ranked.find((r) => r.team === form.team_lead);
+  const selectedJobs = selected?.jobCount || 0;
+  const selectedAreas = selected?.dayDistricts?.length ? selected.dayDistricts.join(', ') : '';
   const editing = Boolean(form.job_id);
+  const headWhen = [form.date ? formatDay(form.date, { weekday: 'short' }) : 'Pick a date', form.team_lead || 'choose team', form.time ? shortTime(form) : '']
+    .filter(Boolean)
+    .join(' · ');
 
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
@@ -90,7 +95,7 @@ function renderForm() {
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
           <div>
             <h2>${editing ? 'Edit booking' : 'New booking'}</h2>
-            <p>${form.date ? formatDay(form.date, { weekday: 'long' }) : 'Pick a date'} · ${form.team_lead || 'choose team'}${form.time ? ' · ' + form.time : ''}</p>
+            <p>${headWhen}</p>
           </div>
           <button class="icon-btn" data-close="1" aria-label="Close">✕</button>
         </div>
@@ -129,7 +134,6 @@ function renderForm() {
           <div class="field">
             <label>Time</label>
             <input id="timeInput" value="${escapeAttr(form.time)}" placeholder="09.00am or 02.15pm" />
-            <div style="font-size:11px;color:#64748b;margin-top:4px">Free text — same style as the spreadsheet</div>
           </div>
         </div>
 
@@ -139,46 +143,32 @@ function renderForm() {
             ${UNIT_TYPES.map((u) => `
               <div class="stepper">
                 <span class="stepper-name">${u.id}</span>
-                <div class="stepper-ctrl">
-                  <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
-                  <strong>${form.units[u.id] || 0}</strong>
-                  <button type="button" data-unit="${u.id}" data-delta="1">+</button>
-                </div>
+                <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
+                <strong>${form.units[u.id] || 0}</strong>
+                <button type="button" data-unit="${u.id}" data-delta="1">+</button>
               </div>`).join('')}
-          </div>
-          <div style="margin-top:8px;font-size:12px;color:#64748b;font-weight:600">
-            ${form.job_type === 'cleaning' ? (acsLabel(form.units) || 'No units yet') : 'Units not required for this job type'}
           </div>
         </div>
 
         <div class="field">
           <label>Notes</label>
-          <input id="notesInput" value="${escapeAttr(form.notes)}" placeholder="Access, parking, language…" />
+          <textarea id="notesInput" rows="2" placeholder="Access, parking, language…">${escapeAttr(form.notes)}</textarea>
         </div>
 
         <div class="field">
           <label>Team</label>
-          ${warn ? `<div class="capacity-live" style="margin-bottom:8px"><strong style="color:#c2410c">Heads up</strong> · ${warn}. You can still book.</div>` : ''}
-          <div class="team-picks">
-            ${ranked.map((r, i) => `
-              <button type="button" class="team-card ${form.team_lead === r.team ? 'on' : ''}" data-team="${r.team}" style="--team:${TEAM_META[r.team].color}">
-                <span class="bar"></span>
-                <span>
-                  <strong>${r.team}</strong>
-                  ${r.dayDistricts.length ? `<div class="meta">${districtChipsHtml(r.dayDistricts)}</div>` : ''}
-                </span>
-                <span>
-                  ${i === 0 ? '<span class="badge">Best</span>' : ''}
-                  <span class="badge">${r.jobCount} job${r.jobCount === 1 ? '' : 's'}</span>
-                </span>
-              </button>`).join('')}
+          ${warn ? `<div class="team-warn">${warn}. You can still book.</div>` : ''}
+          <div class="team-chip-row">
+            ${TEAMS.map((team) => `
+              <button type="button" class="team-chip ${form.team_lead === team ? 'on' : ''}" data-team="${team}" style="--team:${TEAM_META[team].color}">${team}</button>
+            `).join('')}
           </div>
-          <div class="capacity-live" style="margin-top:8px">${form.team_lead} · ${selectedJobs} job${selectedJobs === 1 ? '' : 's'} this day${best && best.team !== form.team_lead ? ' · Suggested: <b>' + best.team + '</b>' : ''}</div>
+          <div class="team-context">${form.team_lead} · ${selectedJobs} job${selectedJobs === 1 ? '' : 's'}${selectedAreas ? ' · ' + selectedAreas : ''}${best && best.team !== form.team_lead ? ' · Suggested ' + best.team : ''}</div>
         </div>
 
-        <div class="grid-2">
+        <div class="grid-3">
           <div class="field">
-            <label>Job type</label>
+            <label>Type</label>
             <select id="typeInput">
               ${JOB_TYPES.map((t) => `<option value="${t.id}" ${form.job_type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
             </select>
@@ -189,10 +179,10 @@ function renderForm() {
               ${PAYMENTS.map((p) => `<option ${form.payment === p ? 'selected' : ''}>${p}</option>`).join('')}
             </select>
           </div>
-        </div>
-        <div class="field">
-          <label>Amount (HKD)</label>
-          <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="Enter amount" />
+          <div class="field">
+            <label>Amount</label>
+            <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
+          </div>
         </div>
       </div>
       <div class="drawer-foot">
