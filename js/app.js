@@ -1,6 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
-import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore, updateJob } from './store.js';
+import { allJobs, getJob, redo, removeJob, resetDemo, subscribe, initStore, undo, updateJob } from './store.js';
 import { hasTimeConflict } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
@@ -332,6 +332,13 @@ function bindChrome() {
     if (row) renderJobModal($('modalRoot'), getJob(row.dataset.job));
   });
   document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'z') {
+      if (isTypingTarget(e.target)) return;
+      e.preventDefault();
+      const result = e.shiftKey ? redo() : undo();
+      if (result) toast(historyToast(result));
+      return;
+    }
     if (e.key === 'Escape') {
       const hits = $('searchHits');
       if (hits && !hits.hidden) {
@@ -360,6 +367,19 @@ function toast(msg) {
   el.classList.add('show');
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function isTypingTarget(el) {
+  const tag = el && el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(el && el.isContentEditable);
+}
+
+function historyToast(result) {
+  const noun = result.kind === 'move' ? 'move'
+    : result.kind === 'edit' ? 'edit'
+    : result.type === 'remove' ? 'cancel'
+    : 'booking';
+  return result.action === 'redo' ? `Redid ${noun}` : `Undid ${noun}`;
 }
 
 function bindSearch() {

@@ -110,9 +110,59 @@ function emit() {
   listeners.forEach((fn) => fn(allJobs()));
 }
 
+const HISTORY_LIMIT = 20;
+let undoStack = [];
+let redoStack = [];
+let recording = true;
+
+function snapshot(job) {
+  return job ? JSON.parse(JSON.stringify(job)) : null;
+}
+
+function pushHistory(entry) {
+  if (!recording) return;
+  undoStack.push(entry);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack = [];
+}
+
+function clearHistory() {
+  undoStack = [];
+  redoStack = [];
+}
+
+function writeJob(job) {
+  const id = job.job_id;
+  const extraIdx = state.extras.findIndex((j) => j.job_id === id);
+  if (extraIdx >= 0) {
+    const next = state.extras.slice();
+    next[extraIdx] = snapshot(job);
+    state.extras = next;
+  } else if (state.seed.some((j) => j.job_id === id)) {
+    state.overrides = { ...state.overrides, [id]: snapshot(job) };
+  } else {
+    state.extras = [...state.extras, snapshot(job)];
+  }
+  state.removed.delete(id);
+}
+
+function eraseJob(id) {
+  state.extras = state.extras.filter((j) => j.job_id !== id);
+  const next = { ...state.overrides };
+  delete next[id];
+  state.overrides = next;
+  state.removed.add(id);
+}
+
+function updateKind(before, after) {
+  if (before.date !== after.date || before.team_lead !== after.team_lead) return 'move';
+  return 'edit';
+}
+
 export function addJob(input) {
   const job = buildJob(input);
   state.extras = [...state.extras, job];
+  pushHistory({ type: 'add', job: snapshot(job) });
   persist();
   emit();
   return job;
@@ -122,33 +172,61 @@ export function updateJob(id, input) {
   const prev = getJob(id);
   if (!prev) return null;
   const job = buildJob({ ...input, job_id: id }, prev);
-  const extraIdx = state.extras.findIndex((j) => j.job_id === id);
-  if (extraIdx >= 0) {
-    const next = state.extras.slice();
-    next[extraIdx] = job;
-    state.extras = next;
-  } else {
-    state.overrides = { ...state.overrides, [id]: job };
-  }
+  writeJob(job);
+  pushHistory({
+    type: 'update',
+    kind: updateKind(prev, job),
+    before: snapshot(prev),
+    after: snapshot(job),
+  });
   persist();
   emit();
   return job;
 }
 
 export function removeJob(id) {
-  state.extras = state.extras.filter((j) => j.job_id !== id);
-  const next = { ...state.overrides };
-  delete next[id];
-  state.overrides = next;
-  state.removed.add(id);
+  const prev = getJob(id);
+  if (!prev) return;
+  const wasExtra = state.extras.some((j) => j.job_id === id);
+  eraseJob(id);
+  pushHistory({ type: 'remove', job: snapshot(prev), wasExtra });
   persist();
   emit();
+}
+
+export function undo() {
+  const entry = undoStack.pop();
+  if (!entry) return null;
+  recording = false;
+  if (entry.type === 'add') eraseJob(entry.job.job_id);
+  else if (entry.type === 'remove') writeJob(entry.job);
+  else if (entry.type === 'update') writeJob(entry.before);
+  recording = true;
+  redoStack.push(entry);
+  persist();
+  emit();
+  return { action: 'undo', type: entry.type, kind: entry.kind || entry.type };
+}
+
+export function redo() {
+  const entry = redoStack.pop();
+  if (!entry) return null;
+  recording = false;
+  if (entry.type === 'add') writeJob(entry.job);
+  else if (entry.type === 'remove') eraseJob(entry.job.job_id);
+  else if (entry.type === 'update') writeJob(entry.after);
+  recording = true;
+  undoStack.push(entry);
+  persist();
+  emit();
+  return { action: 'redo', type: entry.type, kind: entry.kind || entry.type };
 }
 
 export function resetDemo() {
   localStorage.removeItem(STORAGE_KEY);
   const seed = state.seed.length ? state.seed : buildSeedJobs();
   state = createState(seed);
+  clearHistory();
   emit();
 }
 
