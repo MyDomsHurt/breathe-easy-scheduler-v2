@@ -109,8 +109,8 @@ function renderForm() {
             ${warn ? `<div class="team-warn">${warn}. You can still book.</div>` : ''}
             <div class="team-picker">
               ${TEAMS.map((team) => `
-                <button type="button" class="team-pick ${form.team_lead === team ? 'on' : ''}" data-team="${team}" style="--team:${TEAM_META[team].color}">
-                  <i class="team-pip"></i>${team}
+                <button type="button" class="team-pick ${form.team_lead === team ? 'on' : ''}" data-team="${team}" style="--team:${TEAM_META[team].color};--team-soft:${TEAM_META[team].soft}">
+                  <i class="team-pip"></i><span>${team}</span>
                 </button>
               `).join('')}
             </div>
@@ -165,10 +165,10 @@ function renderForm() {
               ${UNIT_TYPES.map((u) => `
                 <div class="unit ${(form.units[u.id] || 0) ? 'on' : ''}">
                   <span class="unit-code">${u.id}</span>
+                  <b>${form.units[u.id] || 0}</b>
                   <div class="unit-ctrl">
-                    <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
-                    <b>${form.units[u.id] || 0}</b>
-                    <button type="button" data-unit="${u.id}" data-delta="1">+</button>
+                    <button type="button" data-unit="${u.id}" data-delta="-1" aria-label="Fewer ${u.id}">−</button>
+                    <button type="button" data-unit="${u.id}" data-delta="1" aria-label="More ${u.id}">+</button>
                   </div>
                 </div>`).join('')}
             </div>
