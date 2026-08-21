@@ -384,6 +384,12 @@ button.day-col-head:hover { background: #e0f2fe; }
 
 .roster-cell.empty { background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 70%); }
 .roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
+.roster-cell.drop-ok {
+  outline: 2px solid #0284c7;
+  outline-offset: -2px;
+  background: #e0f2fe;
+  z-index: 2;
+}
 
 .cell-top {
   display: flex;
@@ -452,10 +458,13 @@ button.day-col-head:hover { background: #e0f2fe; }
   color: inherit;
   text-align: left;
   overflow: hidden;
-  cursor: pointer;
+  cursor: grab;
 }
 
 .job-chip:hover { background: #f8fafc; }
+.job-chip.is-dragging, .job-card.is-dragging { opacity: 0.45; cursor: grabbing; }
+.job-chip .when.time-conflict,
+.job-card .when.time-conflict { color: #dc2626; }
 .job-chip.is-focus, .job-card.is-focus {
   outline: 2px solid #38bdf8;
   outline-offset: 1px;
@@ -595,7 +604,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   padding: 8px;
   margin-bottom: 6px;
   font: inherit;
-  cursor: pointer;
+  cursor: grab;
 }
 .job-card:hover { background: #f8fafc; }
 .job-card .when { font-size: 13px; }

@@ -1,5 +1,5 @@
 import { TEAM_META } from './config.js';
-import { districtsForTeamOnDay, jobsForTeamDay, teamMembersOnDay } from './capacity.js';
+import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay, teamMembersOnDay } from './capacity.js';
 import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function teamColor(name) {
@@ -23,14 +23,14 @@ function hoverTitle(job) {
     .join(' · ');
 }
 
-function chipHtml(job) {
+function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
   const notes = shortNotes(job);
   const notesRow = notes ? `<div class="chip-notes">${esc(notes)}</div>` : '';
-  return `<button class="job-chip ${extra}" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+  return `<button class="job-chip ${extra}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="chip-top">
-      <span class="when">${esc(shortTime(job))}</span>
+      <span class="when${conflict ? ' time-conflict' : ''}">${esc(shortTime(job))}</span>
       ${rightMark(job, type, true)}
     </div>
     <div class="chip-addr">${esc(shortAddress(job))}</div>
@@ -38,7 +38,7 @@ function chipHtml(job) {
   </button>`;
 }
 
-function cardHtml(job) {
+function cardHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
   const notes = shortNotes(job, 140);
@@ -47,9 +47,9 @@ function cardHtml(job) {
     ? `<span class="card-money">${formatMoney(job.amount)}</span>` : '';
   const who = job.client_name
     ? `<div class="who">${esc(job.client_name)}</div>` : '';
-  return `<button class="job-card ${extra}" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+  return `<button class="job-card ${extra}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="card-top">
-      <strong class="when">${esc(shortTime(job))}</strong>
+      <strong class="when${conflict ? ' time-conflict' : ''}">${esc(shortTime(job))}</strong>
       ${rightMark(job, type, false)}
     </div>
     <div class="card-addr">${esc(shortAddress(job, 56))}</div>
@@ -64,9 +64,10 @@ function cellHtml(allJobs, displayJobs, date, team, mode) {
   const shown = jobsForTeamDay(displayJobs, date, team);
   const empty = list.length === 0;
   const districts = empty ? [] : districtsForTeamOnDay(allJobs, date, team);
+  const conflicts = conflictingJobIds(list);
   const body = mode === 'day'
-    ? shown.map(cardHtml).join('')
-    : shown.map(chipHtml).join('');
+    ? shown.map((j) => cardHtml(j, conflicts.has(j.job_id))).join('')
+    : shown.map((j) => chipHtml(j, conflicts.has(j.job_id))).join('');
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <span class="cell-status">${empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')}</span>

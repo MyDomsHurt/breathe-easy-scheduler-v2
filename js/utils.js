@@ -144,6 +144,16 @@ export function shortTime(job) {
   return formatClock(start, ap) || raw;
 }
 
+/** Minutes from midnight for conflict checks. Blank/unparseable times are not conflicts. */
+export function startMinutes(job) {
+  const raw = String(rawTime(job) || '').trim();
+  if (!raw) return null;
+  const label = shortTime(job);
+  if (!label || label === '—') return null;
+  const mins = timeToMinutes(label);
+  return mins === 9999 ? null : mins;
+}
+
 export function shortAddress(job, max = 42) {
   let s = String(job && job.address || '').replace(/\s+/g, ' ').trim();
   if (!s) s = String(job && job.district || '').trim();

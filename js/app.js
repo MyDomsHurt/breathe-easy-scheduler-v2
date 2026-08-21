@@ -1,6 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
-import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, workWeekDays } from './utils.js';
-import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore } from './store.js';
+import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
+import { allJobs, getJob, removeJob, resetDemo, subscribe, initStore, updateJob } from './store.js';
+import { hasTimeConflict } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
@@ -111,6 +112,12 @@ function fillMonthSelect() {
 
 function bindBoardClicks() {
   $('boardMount').addEventListener('click', (e) => {
+    if (suppressClick) {
+      suppressClick = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const chip = e.target.closest('[data-job]');
     if (chip) {
       renderJobModal($('modalRoot'), getJob(chip.dataset.job));
@@ -130,6 +137,69 @@ function bindBoardClicks() {
     const team = add?.dataset.bookTeam || cell?.dataset.team;
     if (!date || !team) return;
     openBooking({ date, team_lead: team });
+  });
+}
+
+let dragJobId = '';
+let suppressClick = false;
+
+function clearDropTargets() {
+  document.querySelectorAll('#boardMount .drop-ok, #boardMount .is-dragging').forEach((el) => {
+    el.classList.remove('drop-ok', 'is-dragging');
+  });
+}
+
+function bindBoardDrag() {
+  const mount = $('boardMount');
+  mount.addEventListener('dragstart', (e) => {
+    const chip = e.target.closest('[data-job]');
+    if (!chip) {
+      e.preventDefault();
+      return;
+    }
+    dragJobId = chip.dataset.job;
+    chip.classList.add('is-dragging');
+    e.dataTransfer.setData('text/plain', dragJobId);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  mount.addEventListener('dragend', () => {
+    dragJobId = '';
+    clearDropTargets();
+  });
+  mount.addEventListener('dragover', (e) => {
+    const cell = e.target.closest('[data-date][data-team]');
+    if (!cell || !dragJobId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!cell.classList.contains('drop-ok')) {
+      document.querySelectorAll('#boardMount .drop-ok').forEach((el) => el.classList.remove('drop-ok'));
+      cell.classList.add('drop-ok');
+    }
+  });
+  mount.addEventListener('drop', (e) => {
+    const cell = e.target.closest('[data-date][data-team]');
+    const id = e.dataTransfer.getData('text/plain') || dragJobId;
+    clearDropTargets();
+    dragJobId = '';
+    if (!cell || !id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClick = true;
+    const job = getJob(id);
+    const date = cell.dataset.date;
+    const team = cell.dataset.team;
+    if (!job || !date || !team) return;
+    if (job.date === date && job.team_lead === team) return;
+    state.monday = mondayOf(date);
+    state.day = date;
+    state.focusJobId = id;
+    const moved = updateJob(id, { ...job, date, team_lead: team });
+    if (!moved) return;
+    if (hasTimeConflict(moved, allJobs())) {
+      toast(`Moved — time conflict at ${shortTime(moved)}`);
+    } else {
+      toast(`Moved to ${moved.team_lead} · ${formatDay(moved.date)}`);
+    }
   });
 }
 
@@ -327,6 +397,7 @@ fillMonthSelect();
 bindFilters();
 bindChrome();
 bindBoardClicks();
+bindBoardDrag();
 subscribe(paint);
 
 initStore()
