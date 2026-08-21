@@ -86,7 +86,8 @@ function goToJob(job) {
   state.focusJobId = job.job_id;
   hideSearchHits();
   paint();
-  renderJobModal($('modalRoot'), job);
+  renderJobModal($('modalRoot'), null);
+  openBooking(job);
 }
 
 function hideSearchHits() {
@@ -120,7 +121,8 @@ function bindBoardClicks() {
     }
     const chip = e.target.closest('[data-job]');
     if (chip) {
-      renderJobModal($('modalRoot'), getJob(chip.dataset.job));
+      const job = getJob(chip.dataset.job);
+      if (job) openBooking(job);
       return;
     }
     const dayHead = e.target.closest('[data-open-day]');
@@ -354,7 +356,10 @@ function bindChrome() {
   });
   $('jobsMount').addEventListener('click', (e) => {
     const row = e.target.closest('[data-job]');
-    if (row) renderJobModal($('modalRoot'), getJob(row.dataset.job));
+    if (row) {
+      const job = getJob(row.dataset.job);
+      if (job) openBooking(job);
+    }
   });
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'z') {
