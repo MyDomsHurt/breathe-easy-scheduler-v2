@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
-import { allJobs, getJob, redo, removeJob, resetDemo, subscribe, initStore, undo, updateJob } from './store.js';
-import { hasTimeConflict, nextStackOrder } from './capacity.js';
+import { allJobs, getJob, redo, removeJob, reorderStack, resetDemo, subscribe, initStore, undo, updateJob } from './store.js';
+import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
@@ -144,11 +144,36 @@ function bindBoardClicks() {
 
 let dragJobId = '';
 let suppressClick = false;
+let dropHint = null;
 
 function clearDropTargets() {
-  document.querySelectorAll('#boardMount .drop-ok, #boardMount .is-dragging').forEach((el) => {
-    el.classList.remove('drop-ok', 'is-dragging');
+  document.querySelectorAll('#boardMount .drop-ok, #boardMount .is-dragging, #boardMount .drop-before, #boardMount .drop-after').forEach((el) => {
+    el.classList.remove('drop-ok', 'is-dragging', 'drop-before', 'drop-after');
   });
+  dropHint = null;
+}
+
+function setDropHint(id, where) {
+  if (dropHint && dropHint.id === id && dropHint.where === where) return;
+  dropHint = { id, where };
+  document.querySelectorAll('#boardMount .drop-before, #boardMount .drop-after').forEach((el) => {
+    el.classList.remove('drop-before', 'drop-after');
+  });
+  if (!id) return;
+  const el = document.querySelector(`#boardMount [data-job="${CSS.escape(id)}"]`);
+  if (el) el.classList.add(where === 'before' ? 'drop-before' : 'drop-after');
+}
+
+function placeInStack(ids, draggedId, targetId, where) {
+  const next = ids.filter((id) => id !== draggedId);
+  if (!targetId || !next.includes(targetId) || where === 'end') {
+    next.push(draggedId);
+    return next;
+  }
+  let i = next.indexOf(targetId);
+  if (where === 'after') i += 1;
+  next.splice(i, 0, draggedId);
+  return next;
 }
 
 function bindBoardDrag() {
@@ -187,14 +212,30 @@ function bindBoardDrag() {
     if (!cell || !dragJobId) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = dragJobId === 'new-appointment' ? 'copy' : 'move';
-    if (!cell.classList.contains('drop-ok')) {
-      document.querySelectorAll('#boardMount .drop-ok').forEach((el) => el.classList.remove('drop-ok'));
+    const job = dragJobId === 'new-appointment' ? null : getJob(dragJobId);
+    const sameStack = job && job.date === cell.dataset.date && job.team_lead === cell.dataset.team;
+    document.querySelectorAll('#boardMount .drop-ok').forEach((el) => {
+      if (el !== cell) el.classList.remove('drop-ok');
+    });
+    if (sameStack) {
+      cell.classList.remove('drop-ok');
+      const overJob = e.target.closest('[data-job]');
+      if (overJob && overJob.dataset.job !== dragJobId) {
+        const rect = overJob.getBoundingClientRect();
+        const where = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
+        setDropHint(overJob.dataset.job, where);
+      } else {
+        setDropHint(null, 'end');
+      }
+    } else {
+      setDropHint(null, null);
       cell.classList.add('drop-ok');
     }
   });
   mount.addEventListener('drop', (e) => {
     const cell = e.target.closest('[data-date][data-team]');
     const id = e.dataTransfer.getData('text/plain') || dragJobId;
+    const hint = dropHint;
     clearDropTargets();
     dragJobId = '';
     $('blankAppt')?.classList.remove('is-dragging');
@@ -211,7 +252,13 @@ function bindBoardDrag() {
     }
     const job = getJob(id);
     if (!job) return;
-    if (job.date === date && job.team_lead === team) return;
+    if (job.date === date && job.team_lead === team) {
+      const ids = jobsForTeamDay(allJobs(), date, team).map((j) => j.job_id);
+      const nextIds = placeInStack(ids, id, hint && hint.id, hint && hint.where);
+      if (nextIds.join() === ids.join()) return;
+      if (reorderStack(nextIds)) toast('Reordered');
+      return;
+    }
     state.monday = mondayOf(date);
     state.day = date;
     state.focusJobId = id;

@@ -162,6 +162,7 @@ function eraseJob(id) {
 
 function updateKind(before, after) {
   if (before.date !== after.date || before.team_lead !== after.team_lead) return 'move';
+  if (before.stack_order !== after.stack_order) return 'move';
   return 'edit';
 }
 
@@ -200,12 +201,34 @@ export function removeJob(id) {
   emit();
 }
 
+export function reorderStack(orderedIds) {
+  const current = orderedIds.map((id, i) => ({ prev: getJob(id), i })).filter((x) => x.prev);
+  if (!current.length) return false;
+  const same = current.every(({ prev, i }) => Number(prev.stack_order) === i);
+  if (same) return false;
+  const befores = [];
+  const afters = [];
+  recording = false;
+  for (const { prev, i } of current) {
+    befores.push(snapshot(prev));
+    const next = buildJob({ ...prev, stack_order: i }, prev);
+    writeJob(next);
+    afters.push(snapshot(next));
+  }
+  recording = true;
+  pushHistory({ type: 'reorder', kind: 'move', before: befores, after: afters });
+  persist();
+  emit();
+  return true;
+}
+
 export function undo() {
   const entry = undoStack.pop();
   if (!entry) return null;
   recording = false;
   if (entry.type === 'add') eraseJob(entry.job.job_id);
   else if (entry.type === 'remove') writeJob(entry.job);
+  else if (entry.type === 'reorder') entry.before.forEach((j) => writeJob(j));
   else if (entry.type === 'update') writeJob(entry.before);
   recording = true;
   redoStack.push(entry);
@@ -220,6 +243,7 @@ export function redo() {
   recording = false;
   if (entry.type === 'add') writeJob(entry.job);
   else if (entry.type === 'remove') eraseJob(entry.job.job_id);
+  else if (entry.type === 'reorder') entry.after.forEach((j) => writeJob(j));
   else if (entry.type === 'update') writeJob(entry.after);
   recording = true;
   undoStack.push(entry);

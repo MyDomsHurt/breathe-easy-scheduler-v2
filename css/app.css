@@ -517,9 +517,28 @@ button.day-col-head:hover { background: #e0f2fe; }
   text-align: left;
   overflow: hidden;
   cursor: grab;
+  position: relative;
 }
 
 .job-chip:hover { background: #f8fafc; }
+.job-chip.drop-before::before,
+.job-card.drop-before::before,
+.job-chip.drop-after::after,
+.job-card.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  border-radius: 3px;
+  background: #0284c7;
+  z-index: 3;
+  pointer-events: none;
+}
+.job-chip.drop-before::before,
+.job-card.drop-before::before { top: -3px; }
+.job-chip.drop-after::after,
+.job-card.drop-after::after { bottom: -3px; }
 .job-chip.is-dragging, .job-card.is-dragging { opacity: 0.45; cursor: grabbing; }
 .job-chip .when.time-conflict,
 .job-card .when.time-conflict { color: #dc2626; }
@@ -681,6 +700,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   margin-bottom: 6px;
   font: inherit;
   cursor: grab;
+  position: relative;
 }
 .job-card:hover { background: #f8fafc; }
 .job-card .when { font-size: 13px; }
