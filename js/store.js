@@ -66,6 +66,9 @@ function buildJob(input, prev) {
     is_return: type === 'return',
     district: input.district || '',
     job_type: type,
+    status: input.status === 'tentative' || input.status === 'confirmed'
+      ? input.status
+      : (base.status === 'tentative' ? 'tentative' : 'confirmed'),
     source: base.source || input.source || 'local',
     stack_order: input.stack_order != null && input.stack_order !== ''
       ? Number(input.stack_order)

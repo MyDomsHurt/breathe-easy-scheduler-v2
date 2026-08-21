@@ -385,7 +385,7 @@ function bindChrome() {
     state.day = job.date;
     state.view = 'board';
     paint();
-    toast(`Saved ${job.client_name} · ${job.team_lead} · ${job.date}`);
+    toast(`${job.status === 'tentative' ? 'Tentative' : 'Saved'} ${job.client_name} · ${job.team_lead} · ${job.date}`);
   });
   window.addEventListener('be:changed', () => paint());
   window.addEventListener('be:toast', (e) => toast(e.detail));

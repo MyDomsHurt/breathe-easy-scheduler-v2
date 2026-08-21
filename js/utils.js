@@ -223,6 +223,10 @@ export function jobTypeOf(job) {
   return 'cleaning';
 }
 
+export function jobStatus(job) {
+  return job && job.status === 'tentative' ? 'tentative' : 'confirmed';
+}
+
 export function formatMoney(n) {
   if (n == null || n === '') return '—';
   return '$' + Math.round(Number(n)).toLocaleString('en-HK');

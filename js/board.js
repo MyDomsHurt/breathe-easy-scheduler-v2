@@ -1,6 +1,6 @@
 import { TEAM_META } from './config.js';
 import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay, teamMembersOnDay } from './capacity.js';
-import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
+import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
@@ -26,12 +26,14 @@ function hoverTitle(job) {
 function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
+  const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = shortNotes(job);
   const notesRow = notes ? `<div class="chip-notes">${esc(notes)}</div>` : '';
-  return `<button class="job-chip ${extra}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+  const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
+  return `<button class="job-chip ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="chip-top">
       <span class="when${conflict ? ' time-conflict' : ''}">${esc(shortTime(job))}</span>
-      ${rightMark(job, type, true)}
+      ${tent}${rightMark(job, type, true)}
     </div>
     <div class="chip-addr">${esc(shortAddress(job))}</div>
     ${notesRow}
@@ -41,16 +43,18 @@ function chipHtml(job, conflict) {
 function cardHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
+  const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = shortNotes(job, 140);
   const notesRow = notes ? `<p class="card-notes">${esc(notes)}</p>` : '';
   const money = type === 'cleaning' && job.amount != null
     ? `<span class="card-money">${formatMoney(job.amount)}</span>` : '';
   const who = job.client_name
     ? `<div class="who">${esc(job.client_name)}</div>` : '';
-  return `<button class="job-card ${extra}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+  const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
+  return `<button class="job-card ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="card-top">
       <strong class="when${conflict ? ' time-conflict' : ''}">${esc(shortTime(job))}</strong>
-      ${rightMark(job, type, false)}
+      ${tent}${rightMark(job, type, false)}
     </div>
     <div class="card-addr">${esc(shortAddress(job, 56))}</div>
     ${who}

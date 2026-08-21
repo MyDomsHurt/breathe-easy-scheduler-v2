@@ -590,6 +590,23 @@ button.day-col-head:hover { background: #e0f2fe; }
 .job-chip.return:hover, .job-card.return:hover { background: repeating-linear-gradient(-45deg, #ffedd5, #ffedd5 3px, #fff7ed 3px, #fff7ed 6px); }
 .job-chip.influencer:hover, .job-card.influencer:hover { background: #ede9fe; }
 
+.job-chip.tentative, .job-card.tentative {
+  background: #fef9c3;
+  border-color: #eab308;
+  border-left-color: #ca8a04;
+}
+.job-chip.tentative.return, .job-card.tentative.return {
+  background: repeating-linear-gradient(-45deg, #fef9c3, #fef9c3 3px, #fde68a 3px, #fde68a 6px);
+  border-color: #eab308;
+  border-left-color: #d97706;
+}
+.job-chip.tentative.influencer, .job-card.tentative.influencer {
+  background: #fef9c3;
+  border: 1px dashed #ca8a04;
+  border-left: 3px solid #7c3aed;
+}
+.job-chip.tentative:hover, .job-card.tentative:hover { background: #fef08a; }
+
 .tag {
   font-size: 9px;
   font-weight: 800;
@@ -600,6 +617,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .tag.return { background: #d97706; }
+.tag.tentative { background: #ca8a04; }
 .tag.influencer { background: #7c3aed; }
 
 .book-here {
@@ -842,6 +860,49 @@ button.day-col-head:hover { background: #e0f2fe; }
 .typeahead-list button:hover { background: #f8fafc; }
 .typeahead-list .sub { display: block; color: var(--muted); font-size: 11px; }
 
+.unit-bar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+.unit-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 5px;
+  border-right: 1px solid var(--line);
+}
+.unit-cell:last-child { border-right: 0; }
+.unit-cell.has-count { background: #f0f9ff; }
+.unit-code {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  color: var(--ink);
+}
+.unit-cell b {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.unit-cell button {
+  width: 22px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+}
+.unit-cell button:hover { color: var(--brand); }
+
 .stepper-row {
   display: flex;
   flex-wrap: wrap;
@@ -909,8 +970,32 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-color: var(--team);
   color: white;
 }
+.team-seg {
+  display: flex;
+  background: #eef3f7;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.team-seg-btn {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.team-seg-btn.on {
+  background: var(--team);
+  color: white;
+}
 .team-context {
-  margin-top: 6px;
+  margin-top: 5px;
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
@@ -964,6 +1049,12 @@ button.day-col-head:hover { background: #e0f2fe; }
   background: #f8fafc;
   border: 1px solid var(--line);
   font-size: 13px;
+}
+
+.tent-btn.on {
+  background: #fef08a;
+  border-color: #eab308;
+  color: #854d0e;
 }
 
 .drawer-foot {
