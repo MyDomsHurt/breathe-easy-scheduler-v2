@@ -97,101 +97,115 @@ function renderForm() {
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
           <div>
             <h2>${editing ? 'Edit booking' : 'New booking'}</h2>
-            <p>${headWhen}</p>
+            <p>${headWhen}${form.status === 'tentative' ? ' · Tentative' : ''}</p>
           </div>
           <button class="icon-btn" data-close="1" aria-label="Close">✕</button>
         </div>
       </div>
       <div class="drawer-body">
-        <div class="field">
-          <label>Team</label>
-          ${warn ? `<div class="team-warn">${warn}. You can still book.</div>` : ''}
-          <div class="team-seg">
-            ${TEAMS.map((team) => `
-              <button type="button" class="team-seg-btn ${form.team_lead === team ? 'on' : ''}" data-team="${team}" style="--team:${TEAM_META[team].color}">${team}</button>
-            `).join('')}
+        <section class="form-block form-block-lead">
+          <div class="field">
+            <label>Team</label>
+            ${warn ? `<div class="team-warn">${warn}. You can still book.</div>` : ''}
+            <div class="team-picker">
+              ${TEAMS.map((team) => `
+                <button type="button" class="team-pick ${form.team_lead === team ? 'on' : ''}" data-team="${team}" style="--team:${TEAM_META[team].color}">
+                  <i class="team-pip"></i>${team}
+                </button>
+              `).join('')}
+            </div>
+            <div class="team-context">${selectedJobs} job${selectedJobs === 1 ? '' : 's'}${selectedAreas ? ' · ' + selectedAreas : ''}${best && best.team !== form.team_lead ? ' · Suggested ' + best.team : ''}</div>
           </div>
-          <div class="team-context">${selectedJobs} job${selectedJobs === 1 ? '' : 's'}${selectedAreas ? ' · ' + selectedAreas : ''}${best && best.team !== form.team_lead ? ' · Suggested ' + best.team : ''}</div>
-        </div>
+        </section>
 
-        <div class="field">
-          <label>Client</label>
-          <div class="typeahead">
-            <input id="clientSearch" type="search" placeholder="Search name or mobile, or type a new name" value="${escapeAttr(form.client_name)}" autocomplete="off" />
-            <div id="clientHits" class="typeahead-list" hidden></div>
+        <section class="form-block">
+          <div class="field field-primary">
+            <label>Client</label>
+            <div class="typeahead">
+              <input id="clientSearch" type="search" placeholder="Name or mobile" value="${escapeAttr(form.client_name)}" autocomplete="off" />
+              <div id="clientHits" class="typeahead-list" hidden></div>
+            </div>
           </div>
-        </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Date</label>
+              <input id="dateInput" type="date" value="${form.date}" />
+            </div>
+            <div class="field">
+              <label>Time</label>
+              <input id="timeInput" value="${escapeAttr(form.time)}" />
+            </div>
+          </div>
+        </section>
 
-        <div class="grid-2">
-          <div class="field">
-            <label>Date</label>
-            <input id="dateInput" type="date" value="${form.date}" />
+        <section class="form-block form-block-quiet">
+          <div class="grid-2">
+            <div class="field">
+              <label>Mobile</label>
+              <input id="mobileInput" value="${escapeAttr(form.mobile)}" />
+            </div>
+            <div class="field">
+              <label>District</label>
+              <select id="districtInput">
+                <option value="">Select</option>
+                ${Object.entries(DISTRICTS).map(([k, v]) => `<option value="${k}" ${form.district === k ? 'selected' : ''}>${v.short} · ${v.label}</option>`).join('')}
+              </select>
+            </div>
           </div>
           <div class="field">
-            <label>Time</label>
-            <input id="timeInput" value="${escapeAttr(form.time)}" />
+            <label>Address</label>
+            <input id="addressInput" value="${escapeAttr(form.address)}" />
           </div>
-        </div>
+        </section>
 
-        <div class="grid-2">
+        <section class="form-block">
           <div class="field">
-            <label>Mobile</label>
-            <input id="mobileInput" value="${escapeAttr(form.mobile)}" />
+            <label>ACs</label>
+            <div class="unit-strip">
+              ${UNIT_TYPES.map((u) => `
+                <div class="unit ${(form.units[u.id] || 0) ? 'on' : ''}">
+                  <span class="unit-code">${u.id}</span>
+                  <div class="unit-ctrl">
+                    <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
+                    <b>${form.units[u.id] || 0}</b>
+                    <button type="button" data-unit="${u.id}" data-delta="1">+</button>
+                  </div>
+                </div>`).join('')}
+            </div>
           </div>
           <div class="field">
-            <label>District</label>
-            <select id="districtInput">
-              <option value="">Select</option>
-              ${Object.entries(DISTRICTS).map(([k, v]) => `<option value="${k}" ${form.district === k ? 'selected' : ''}>${v.short} · ${v.label}</option>`).join('')}
-            </select>
+            <label>Notes</label>
+            <textarea id="notesInput" rows="2" placeholder="Access, parking, language…">${escapeAttr(form.notes)}</textarea>
           </div>
-        </div>
-        <div class="field">
-          <label>Address</label>
-          <input id="addressInput" value="${escapeAttr(form.address)}" />
-        </div>
+        </section>
 
-        <div class="field">
-          <label>ACs</label>
-          <div class="unit-bar">
-            ${UNIT_TYPES.map((u) => `
-              <div class="unit-cell ${(form.units[u.id] || 0) ? 'has-count' : ''}">
-                <span class="unit-code">${u.id}</span>
-                <button type="button" data-unit="${u.id}" data-delta="1">+</button>
-                <b>${form.units[u.id] || 0}</b>
-                <button type="button" data-unit="${u.id}" data-delta="-1">−</button>
-              </div>`).join('')}
+        <section class="form-block form-block-meta">
+          <div class="grid-3">
+            <div class="field">
+              <label>Type</label>
+              <select id="typeInput">
+                ${JOB_TYPES.map((t) => `<option value="${t.id}" ${form.job_type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Payment</label>
+              <select id="payInput">
+                ${PAYMENTS.map((p) => `<option ${form.payment === p ? 'selected' : ''}>${p}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Amount</label>
+              <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
+            </div>
           </div>
-        </div>
-
-        <div class="field">
-          <label>Notes</label>
-          <textarea id="notesInput" rows="2" placeholder="Access, parking, language…">${escapeAttr(form.notes)}</textarea>
-        </div>
-
-        <div class="grid-3">
-          <div class="field">
-            <label>Type</label>
-            <select id="typeInput">
-              ${JOB_TYPES.map((t) => `<option value="${t.id}" ${form.job_type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label>Payment</label>
-            <select id="payInput">
-              ${PAYMENTS.map((p) => `<option ${form.payment === p ? 'selected' : ''}>${p}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label>Amount</label>
-            <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
-          </div>
-        </div>
+        </section>
       </div>
       <div class="drawer-foot">
-        ${editing ? '<button class="ghost-btn" id="deleteBooking" style="margin-right:auto;color:#b91c1c;border-color:#fecaca">Cancel job</button>' : '<span style="margin-right:auto"></span>'}
-        <button class="ghost-btn tent-btn ${form.status === 'tentative' ? 'on' : ''}" id="saveTentative" type="button">Tentative</button>
-        <button class="primary-btn" id="saveBooking" type="button">Save</button>
+        ${editing ? '<button class="ghost-btn danger-btn" id="deleteBooking" type="button">Cancel job</button>' : '<span class="foot-spacer"></span>'}
+        <div class="foot-actions">
+          <button class="ghost-btn tent-btn ${form.status === 'tentative' ? 'on' : ''}" id="saveTentative" type="button">Tentative</button>
+          <button class="primary-btn" id="saveBooking" type="button">Save</button>
+        </div>
       </div>
     </aside>
   `;
