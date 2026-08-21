@@ -97,7 +97,7 @@ function renderForm() {
       </div>
       <div class="drawer-body">
         <div class="field">
-          <label>1. Client</label>
+          <label>Client</label>
           <div class="typeahead">
             <input id="clientSearch" type="search" placeholder="Search name or mobile, or type a new name" value="${escapeAttr(form.client_name)}" autocomplete="off" />
             <div id="clientHits" class="typeahead-list" hidden></div>
@@ -117,12 +117,24 @@ function renderForm() {
           </div>
         </div>
         <div class="field">
-          <label>2. Address</label>
+          <label>Address</label>
           <input id="addressInput" value="${escapeAttr(form.address)}" placeholder="Building, floor, street" />
         </div>
 
+        <div class="grid-2">
+          <div class="field">
+            <label>Date</label>
+            <input id="dateInput" type="date" value="${form.date}" />
+          </div>
+          <div class="field">
+            <label>Time</label>
+            <input id="timeInput" value="${escapeAttr(form.time)}" placeholder="09.00am or 02.15pm" />
+            <div style="font-size:11px;color:#64748b;margin-top:4px">Free text — same style as the spreadsheet</div>
+          </div>
+        </div>
+
         <div class="field">
-          <label>3. ACs</label>
+          <label>ACs</label>
           <div class="stepper-row">
             ${UNIT_TYPES.map((u) => `
               <div class="stepper">
@@ -139,20 +151,13 @@ function renderForm() {
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="field">
-            <label>4. Date</label>
-            <input id="dateInput" type="date" value="${form.date}" />
-          </div>
-          <div class="field">
-            <label>5. Time</label>
-            <input id="timeInput" value="${escapeAttr(form.time)}" placeholder="09.00am or 02.15pm" />
-            <div style="font-size:11px;color:#64748b;margin-top:4px">Free text — same style as the spreadsheet</div>
-          </div>
+        <div class="field">
+          <label>Notes</label>
+          <input id="notesInput" value="${escapeAttr(form.notes)}" placeholder="Access, parking, language…" />
         </div>
 
         <div class="field">
-          <label>6. Team</label>
+          <label>Team</label>
           ${warn ? `<div class="capacity-live" style="margin-bottom:8px"><strong style="color:#c2410c">Heads up</strong> · ${warn}. You can still book.</div>` : ''}
           <div class="team-picks">
             ${ranked.map((r, i) => `
@@ -173,7 +178,7 @@ function renderForm() {
 
         <div class="grid-2">
           <div class="field">
-            <label>7. Job type</label>
+            <label>Job type</label>
             <select id="typeInput">
               ${JOB_TYPES.map((t) => `<option value="${t.id}" ${form.job_type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
             </select>
@@ -185,15 +190,9 @@ function renderForm() {
             </select>
           </div>
         </div>
-        <div class="grid-2">
-          <div class="field">
-            <label>Amount (HKD)</label>
-            <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="Enter amount" />
-          </div>
-          <div class="field">
-            <label>Notes</label>
-            <input id="notesInput" value="${escapeAttr(form.notes)}" placeholder="Access, parking, language…" />
-          </div>
+        <div class="field">
+          <label>Amount (HKD)</label>
+          <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="Enter amount" />
         </div>
       </div>
       <div class="drawer-foot">
